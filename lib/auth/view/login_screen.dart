@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../controller/login_controller.dart';
 import '../model/login_model.dart';
+import '../../terms&permissions/view/terms&conditions_view.dart';
+import '../../terms&permissions/view/permissions_screen.dart';
+import '../../terms&permissions/controller/terms&conditions_controller.dart';
+import '../../prior_data/controller/farm_data_controller.dart';
+import '../../prior_data/view/data_collection_welcome_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,8 +65,55 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      // Navigate to main screen
-      Navigator.pushReplacementNamed(context, '/main');
+
+      // Check if user has accepted terms and granted permissions
+      final termsController = TermsConditionsController();
+      final permissionsController = PermissionsController();
+
+      final hasAcceptedTerms = await termsController.hasAcceptedTerms();
+
+      if (!mounted) return;
+
+      if (!hasAcceptedTerms) {
+        // User hasn't accepted terms - go to terms screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TermsConditionsScreen(),
+          ),
+        );
+      } else {
+        // Terms accepted, now check permissions
+        final permissionStatus = await permissionsController
+            .checkPermissionStatus();
+        final hasLocation = permissionStatus['location'] ?? false;
+
+        if (!hasLocation) {
+          // Location not granted - go to permissions screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PermissionsScreen()),
+          );
+        } else {
+          // Permissions granted - check if farm data is complete
+          final farmDataController = FarmDataController();
+          final isFarmDataComplete = await farmDataController
+              .isFarmDataComplete();
+
+          if (!isFarmDataComplete) {
+            // Farm data not complete - go to data collection
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DataCollectionWelcomeScreen(),
+              ),
+            );
+          } else {
+            // All good - go to main screen
+            Navigator.pushReplacementNamed(context, '/main');
+          }
+        }
+      }
     } else {
       setState(() {
         _errorMessage = result['message'];
@@ -90,8 +142,55 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      // Navigate to main screen
-      Navigator.pushReplacementNamed(context, '/main');
+
+      // Check if user has accepted terms and granted permissions
+      final termsController = TermsConditionsController();
+      final permissionsController = PermissionsController();
+
+      final hasAcceptedTerms = await termsController.hasAcceptedTerms();
+
+      if (!mounted) return;
+
+      if (!hasAcceptedTerms) {
+        // User hasn't accepted terms - go to terms screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TermsConditionsScreen(),
+          ),
+        );
+      } else {
+        // Terms accepted, now check permissions
+        final permissionStatus = await permissionsController
+            .checkPermissionStatus();
+        final hasLocation = permissionStatus['location'] ?? false;
+
+        if (!hasLocation) {
+          // Location not granted - go to permissions screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PermissionsScreen()),
+          );
+        } else {
+          // Permissions granted - check if farm data is complete
+          final farmDataController = FarmDataController();
+          final isFarmDataComplete = await farmDataController
+              .isFarmDataComplete();
+
+          if (!isFarmDataComplete) {
+            // Farm data not complete - go to data collection
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DataCollectionWelcomeScreen(),
+              ),
+            );
+          } else {
+            // All good - go to main screen
+            Navigator.pushReplacementNamed(context, '/main');
+          }
+        }
+      }
     } else {
       if (result['message'] != 'Sign in cancelled') {
         setState(() {
@@ -296,7 +395,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       'assets/google_logo.png',
                       height: 24,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.g_mobiledata, size: 24);
+                        // Fallback to a simple Google "G" icon
+                        return Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'G',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                        );
                       },
                     ),
                     label: const Text(

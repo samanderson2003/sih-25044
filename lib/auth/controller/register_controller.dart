@@ -37,7 +37,11 @@ class RegisterController {
 
       // Create user document in Firestore
       if (userCredential.user != null) {
-        await _createUserDocument(userCredential.user!, model.name);
+        await _createUserDocument(
+          userCredential.user!,
+          model.name,
+          model.mobileNumber,
+        );
       }
 
       // Send email verification
@@ -89,6 +93,7 @@ class RegisterController {
         await _createUserDocument(
           userCredential.user!,
           userCredential.user!.displayName,
+          null, // No mobile number from Google sign-in
         );
       }
 
@@ -108,7 +113,11 @@ class RegisterController {
   }
 
   // Create user document in Firestore
-  Future<void> _createUserDocument(User user, String? name) async {
+  Future<void> _createUserDocument(
+    User user,
+    String? name,
+    String? mobileNumber,
+  ) async {
     try {
       final userDocRef = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await userDocRef.get();
@@ -118,6 +127,7 @@ class RegisterController {
           'uid': user.uid,
           'email': user.email,
           'displayName': name ?? user.displayName,
+          'mobileNumber': mobileNumber,
           'photoURL': user.photoURL,
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),

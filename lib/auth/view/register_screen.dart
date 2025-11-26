@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../controller/register_controller.dart';
 import '../model/register_model.dart';
+import '../../terms&permissions/view/terms&conditions_view.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,6 +14,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _mobileController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final RegisterController _registerController = RegisterController();
@@ -32,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _mobileController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -48,6 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final model = RegisterModel(
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
+      mobileNumber: _mobileController.text.trim(),
       password: _passwordController.text.trim(),
       confirmPassword: _confirmPasswordController.text.trim(),
     );
@@ -67,8 +71,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      // Navigate to main screen
-      Navigator.pushReplacementNamed(context, '/main');
+      // Navigate to terms screen for new users
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const TermsConditionsScreen()),
+      );
     } else {
       setState(() {
         _errorMessage = result['message'];
@@ -222,6 +229,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Mobile Number Field
+                  TextFormField(
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    decoration: _buildInputDecoration(
+                      'Mobile Number (Optional)',
+                      Icons.phone_outlined,
+                    ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final cleanNumber = value.replaceAll(
+                          RegExp(r'[^0-9]'),
+                          '',
+                        );
+                        if (cleanNumber.length != 10) {
+                          return 'Mobile number must be 10 digits';
+                        }
+                        if (!RegExp(r'^[6-9]').hasMatch(cleanNumber)) {
+                          return 'Invalid mobile number';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
                   // Password Field
                   TextFormField(
                     controller: _passwordController,
@@ -347,7 +380,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       'assets/google_logo.png',
                       height: 24,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.g_mobiledata, size: 24);
+                        // Fallback to a simple Google "G" icon
+                        return Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'G',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                        );
                       },
                     ),
                     label: const Text(
