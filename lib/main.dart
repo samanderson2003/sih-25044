@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'auth/view/login_screen.dart';
 import 'auth/view/register_screen.dart';
 import 'home/view/home_screen.dart';
+import 'crop_yield_prediction/view/crop_yield_prediction_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/main': (context) => const HomeScreen(),
+        '/crop-prediction': (context) => const CropYieldPredictionScreen(),
       },
     );
   }
