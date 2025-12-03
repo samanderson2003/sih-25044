@@ -17,139 +17,250 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 20),
-
-            // Title Section
-            const Text(
-              'Crop Disease Detection',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D5016),
-              ),
-            ),
             const SizedBox(height: 8),
-            Text(
-              'Upload or capture an image of your crop to detect diseases',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 30),
 
-            // Camera Option
-            _buildDetectionOption(
-              icon: Icons.camera_alt,
+            // Title Section with Icon
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D5016).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.biotech_rounded,
+                    color: Color(0xFF2D5016),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Crop Disease Detection',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D5016),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'AI-powered instant diagnosis',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+
+            // Camera Option Card
+            _buildEnhancedDetectionOption(
+              icon: Icons.camera_alt_rounded,
               title: 'Take Photo',
               description: 'Capture image using camera',
-              color: const Color(0xFF2D5016),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2D5016), Color(0xFF3D7020)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               onTap: () {
-                // TODO: Implement camera functionality
                 _showComingSoonDialog('Camera');
               },
             ),
             const SizedBox(height: 16),
 
-            // Gallery Option
-            _buildDetectionOption(
-              icon: Icons.photo_library,
+            // Gallery Option Card
+            _buildEnhancedDetectionOption(
+              icon: Icons.photo_library_rounded,
               title: 'Choose from Gallery',
               description: 'Select image from your device',
-              color: const Color(0xFF3D6B23),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF3D7020),
+                  const Color(0xFF3D7020).withOpacity(0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               onTap: () {
-                // TODO: Implement gallery functionality
                 _showComingSoonDialog('Gallery');
               },
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
 
-            // Info Card
+            // Enhanced Info Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF2D5016).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF2D5016).withOpacity(0.08),
+                    const Color(0xFF2D5016).withOpacity(0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: const Color(0xFF2D5016).withOpacity(0.3),
+                  color: const Color(0xFF2D5016).withOpacity(0.15),
+                  width: 1.5,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: const [
-                      Icon(
-                        Icons.info_outline,
-                        color: Color(0xFF2D5016),
-                        size: 20,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2D5016).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lightbulb_rounded,
+                          color: Color(0xFF2D5016),
+                          size: 20,
+                        ),
                       ),
-                      SizedBox(width: 8),
-                      Text(
+                      const SizedBox(width: 12),
+                      const Text(
                         'Tips for Best Results',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2D5016),
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildTipItem('Ensure good lighting conditions'),
-                  _buildTipItem('Focus on affected leaf or plant part'),
-                  _buildTipItem('Avoid blurry or distant images'),
-                  _buildTipItem('Capture clear visible symptoms'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Recent Detections (Placeholder)
-            const Text(
-              'Recent Detections',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D5016),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Column(
-                children: [
-                  Icon(Icons.history, size: 60, color: Colors.grey[400]),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No recent detections',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  const SizedBox(height: 16),
+                  _buildEnhancedTipItem(
+                    'Ensure good lighting conditions',
+                    Icons.wb_sunny_rounded,
+                  ),
+                  _buildEnhancedTipItem(
+                    'Focus on affected leaf or plant part',
+                    Icons.center_focus_strong_rounded,
+                  ),
+                  _buildEnhancedTipItem(
+                    'Avoid blurry or distant images',
+                    Icons.high_quality_rounded,
+                  ),
+                  _buildEnhancedTipItem(
+                    'Capture clear visible symptoms',
+                    Icons.visibility_rounded,
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+
+            // Recent Detections Section
+            Row(
+              children: [
+                const Icon(
+                  Icons.history_rounded,
+                  color: Color(0xFF2D5016),
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Recent Detections',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D5016),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Empty State
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.history_rounded,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Recent Detections',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your detection history will appear here',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetectionOption({
+  Widget _buildEnhancedDetectionOption({
     required IconData icon,
     required String title,
     required String description,
-    required Color color,
+    required Gradient gradient,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
+              color: const Color(0xFF2D5016).withOpacity(0.2),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -157,56 +268,88 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: Icon(icon, color: Colors.white, size: 28),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: const TextStyle(
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: color,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, color: color, size: 18),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTipItem(String text) {
+  Widget _buildEnhancedTipItem(String text, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.check_circle, size: 16, color: Color(0xFF2D5016)),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D5016).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: const Color(0xFF2D5016),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+              ),
             ),
           ),
         ],
@@ -218,24 +361,62 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
-          children: const [
-            Icon(Icons.info_outline, color: Color(0xFF2D5016)),
-            SizedBox(width: 8),
-            Text('Coming Soon'),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2D5016).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.info_rounded,
+                color: Color(0xFF2D5016),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Coming Soon',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         content: Text(
           '$feature functionality will be available in the next update.',
-          style: const TextStyle(fontSize: 14),
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.5,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF2D5016))),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF2D5016).withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+            ),
+            child: const Text(
+              'Got it',
+              style: TextStyle(
+                color: Color(0xFF2D5016),
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
           ),
         ],
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       ),
     );
   }

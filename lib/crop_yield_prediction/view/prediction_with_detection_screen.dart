@@ -19,6 +19,9 @@ class _PredictionWithDetectionScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -33,142 +36,40 @@ class _PredictionWithDetectionScreenState
       backgroundColor: const Color(0xFFF8F6F0),
       body: Column(
         children: [
-          // Custom AppBar with Split Tabs
+          // Transparent AppBar with Custom Tab Buttons
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF2D5016),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+              color: Colors.transparent,
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.withOpacity(0.2),
+                  width: 1,
                 ),
-              ],
+              ),
             ),
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 8,
+              left: 16,
+              right: 16,
+            ),
             child: Row(
               children: [
-                // Crop Yield Prediction Tab
+                // Crop Yield Tab
                 Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _tabController.animateTo(0);
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: _tabController.index == 0
-                            ? const Color(0xFFF8F6F0)
-                            : Colors.transparent,
-                        border: _tabController.index == 0
-                            ? const Border(
-                                bottom: BorderSide(
-                                  color: Color(0xFF2D5016),
-                                  width: 3,
-                                ),
-                              )
-                            : null,
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.trending_up,
-                            color: _tabController.index == 0
-                                ? const Color(0xFF2D5016)
-                                : Colors.white.withOpacity(0.9),
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Crop Yield',
-                            style: TextStyle(
-                              color: _tabController.index == 0
-                                  ? const Color(0xFF2D5016)
-                                  : Colors.white.withOpacity(0.9),
-                              fontSize: 15,
-                              fontWeight: _tabController.index == 0
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: _buildTabButton(
+                    index: 0,
+                    icon: Icons.trending_up_rounded,
+                    label: 'Crop Yield',
                   ),
                 ),
-                // Vertical Divider
-                Container(
-                  width: 1.5,
-                  height: 40,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.4),
-                        Colors.white.withOpacity(0.1),
-                      ],
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 12),
                 // Detection Tab
                 Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _tabController.animateTo(1);
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: _tabController.index == 1
-                            ? const Color(0xFFF8F6F0)
-                            : Colors.transparent,
-                        border: _tabController.index == 1
-                            ? const Border(
-                                bottom: BorderSide(
-                                  color: Color(0xFF2D5016),
-                                  width: 3,
-                                ),
-                              )
-                            : null,
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.camera_alt,
-                            color: _tabController.index == 1
-                                ? const Color(0xFF2D5016)
-                                : Colors.white.withOpacity(0.9),
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Detection',
-                            style: TextStyle(
-                              color: _tabController.index == 1
-                                  ? const Color(0xFF2D5016)
-                                  : Colors.white.withOpacity(0.9),
-                              fontSize: 15,
-                              fontWeight: _tabController.index == 1
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: _buildTabButton(
+                    index: 1,
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Detection',
                   ),
                 ),
               ],
@@ -185,6 +86,64 @@ class _PredictionWithDetectionScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = _tabController.index == index;
+
+    return GestureDetector(
+      onTap: () {
+        _tabController.animateTo(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF2D5016).withOpacity(0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF2D5016).withOpacity(0.3)
+                : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? const Color(0xFF2D5016)
+                  : Colors.grey.shade600,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? const Color(0xFF2D5016)
+                      : Colors.grey.shade600,
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

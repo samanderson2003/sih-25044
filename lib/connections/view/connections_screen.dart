@@ -48,29 +48,25 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               left: 0,
               right: 0,
               child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F6F0),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.grey.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                ),
                 padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 12,
-                  bottom: 12,
+                  top: MediaQuery.of(context).padding.top + 8,
+                  bottom: 8,
                   left: 16,
                   right: 16,
                 ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D5016),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Community Chat Button
-                    _buildTopNavButton(
-                      icon: Icons.chat_bubble,
-                      label: 'Community',
+                    GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
@@ -79,23 +75,30 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                           ),
                         );
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/chats.png',
+                          width: 36,
+                          height: 34,
+                          color: const Color(0xFF2D5016),
+                        ),
+                      ),
                     ),
-
+                    const Spacer(),
                     // Title
                     const Text(
-                      'AgriConnect',
+                      'FarmConnect',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFF2D5016),
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                     ),
-
+                    const Spacer(),
                     // News Feed Button
-                    _buildTopNavButton(
-                      icon: Icons.article,
-                      label: 'News',
+                    GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
@@ -104,6 +107,15 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                           ),
                         );
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/news.png',
+                          width: 34,
+                          height: 34,
+                          color: const Color(0xFF2D5016),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -190,34 +202,13 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
 
   Widget _buildTopNavButton({
     required IconData icon,
-    required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Icon(icon, color: const Color(0xFF2D5016), size: 24),
       ),
     );
   }

@@ -35,14 +35,43 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         selectedItemColor: const Color(0xFF2D5016),
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
+            icon: Image.asset(
+              'assets/home.png',
+              width: 28,
+              height: 28,
+              color: _currentIndex == 0 ? const Color(0xFF2D5016) : Colors.grey,
+            ),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/prediction.png',
+              width: 28,
+              height: 28,
+              color: _currentIndex == 1 ? const Color(0xFF2D5016) : Colors.grey,
+            ),
             label: 'Prediction',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: 'Connect'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/connect.png',
+              width: 28,
+              height: 28,
+              color: _currentIndex == 2 ? const Color(0xFF2D5016) : Colors.grey,
+            ),
+            label: 'Connect',
+          ),
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/profile.png',
+              width: 28,
+              height: 28,
+              color: _currentIndex == 3 ? const Color(0xFF2D5016) : Colors.grey,
+            ),
+            label: 'Profile',
+          ),
         ],
       ),
     );

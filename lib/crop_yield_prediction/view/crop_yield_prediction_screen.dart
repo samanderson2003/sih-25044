@@ -154,17 +154,6 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F0),
       body: _predictionResult == null ? _buildInputForm() : _buildResultsView(),
-      floatingActionButton: _predictionResult == null
-          ? FloatingActionButton.extended(
-              onPressed: _testConnection,
-              backgroundColor: const Color(0xFF2D5016),
-              icon: const Icon(Icons.wifi, color: Colors.white),
-              label: const Text(
-                'Test API',
-                style: TextStyle(color: Colors.white),
-              ),
-            )
-          : null,
     );
   }
 
@@ -177,29 +166,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Info Banner
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Default values are pre-filled for testing. Tap the WiFi icon to test API connection.',
-                      style: TextStyle(
-                        color: Colors.blue.shade900,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
             const SizedBox(height: 20),
 
             _buildSectionTitle('Farm Details'),

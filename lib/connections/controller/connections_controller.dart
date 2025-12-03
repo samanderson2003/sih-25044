@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import '../model/farmer_model.dart';
 
 class ConnectionsController extends ChangeNotifier {
@@ -8,6 +11,8 @@ class ConnectionsController extends ChangeNotifier {
   FarmerProfile? _selectedFarmer;
   List<FarmerProfile> _farmers = [];
   FarmerProfile? _currentUser;
+  BitmapDescriptor? _farmerIcon;
+  BitmapDescriptor? _myFarmIcon;
 
   // Getters
   GoogleMapController? get mapController => _mapController;
@@ -17,7 +22,38 @@ class ConnectionsController extends ChangeNotifier {
   FarmerProfile? get currentUser => _currentUser;
 
   ConnectionsController() {
+    _loadCustomMarkerIcon();
     _loadStaticData();
+  }
+
+  Future<void> _loadCustomMarkerIcon() async {
+    // Load farmer icon
+    final ByteData farmerData = await rootBundle.load('assets/pin.png');
+    final ui.Codec farmerCodec = await ui.instantiateImageCodec(
+      farmerData.buffer.asUint8List(),
+      targetWidth: 120,
+    );
+    final ui.FrameInfo farmerFi = await farmerCodec.getNextFrame();
+    final ByteData? farmerByteData = await farmerFi.image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final Uint8List farmerResizedData = farmerByteData!.buffer.asUint8List();
+    _farmerIcon = BitmapDescriptor.fromBytes(farmerResizedData);
+
+    // Load myfarm icon
+    final ByteData myFarmData = await rootBundle.load('assets/farm-location.png');
+    final ui.Codec myFarmCodec = await ui.instantiateImageCodec(
+      myFarmData.buffer.asUint8List(),
+      targetWidth: 120,
+    );
+    final ui.FrameInfo myFarmFi = await myFarmCodec.getNextFrame();
+    final ByteData? myFarmByteData = await myFarmFi.image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final Uint8List myFarmResizedData = myFarmByteData!.buffer.asUint8List();
+    _myFarmIcon = BitmapDescriptor.fromBytes(myFarmResizedData);
+
+    _createMarkers(); // Create markers after icons are loaded
   }
 
   void setMapController(GoogleMapController controller) {
@@ -139,14 +175,17 @@ class ConnectionsController extends ChangeNotifier {
   }
 
   void _createMarkers() {
+    if (_farmerIcon == null || _myFarmIcon == null) {
+      // Icons not loaded yet, wait for them
+      return;
+    }
+
     _markers = _farmers.map((farmer) {
       final isCurrentUser = farmer.id == _currentUser?.id;
       return Marker(
         markerId: MarkerId(farmer.id),
         position: LatLng(farmer.latitude, farmer.longitude),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          isCurrentUser ? BitmapDescriptor.hueBlue : BitmapDescriptor.hueGreen,
-        ),
+        icon: isCurrentUser ? _myFarmIcon! : _farmerIcon!,
         infoWindow: InfoWindow(title: farmer.name, snippet: farmer.currentCrop),
         onTap: () => selectFarmer(farmer),
       );
