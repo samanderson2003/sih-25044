@@ -3,7 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../controller/terms&conditions_controller.dart';
 import '../model/terms&conditions_model.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
-import '../../prior_data/view/data_collection_welcome_screen.dart';
+import '../../prior_data/view/simplified_data_collection_flow.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -228,7 +228,7 @@ class _PermissionsScreenState extends State<PermissionsScreen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const DataCollectionWelcomeScreen(),
+          builder: (context) => const SimplifiedDataCollectionFlow(),
         ),
       );
     } else {
