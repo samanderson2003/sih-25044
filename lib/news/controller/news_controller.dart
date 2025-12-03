@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../model/news_article.dart';
 
 /// Controller managing news feed state and business logic
@@ -6,9 +8,17 @@ class NewsController extends ChangeNotifier {
   String _selectedCategory = 'All';
   final Set<String> _bookmarkedArticles = {};
   bool _isLoading = false;
+  List<NewsArticle> _cachedArticles = [];
+  String? _error;
+
+  // GNews API Configuration
+  static const String _apiKey =
+      '957406d6d5bd784c638befb73d058a94'; // Get from gnews.io
+  static const String _baseUrl = 'https://gnews.io/api/v4';
 
   String get selectedCategory => _selectedCategory;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
   /// Available news categories
   final List<String> categories = [
@@ -20,15 +30,204 @@ class NewsController extends ChangeNotifier {
     'Crop Health',
   ];
 
-  /// Get static news articles (replace with Firebase later)
-  List<NewsArticle> getArticles() {
-    final allArticles = _getStaticArticles();
+  NewsController() {
+    // Load articles on initialization
+    fetchArticles();
+  }
 
-    if (_selectedCategory == 'All') {
-      return allArticles;
+  /// Fetch articles from GNews API
+  Future<void> fetchArticles() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final queryParams = {
+        'q': 'agriculture farming crops',
+        'lang': 'en',
+        'country': 'in', // Focus on Indian news
+        'max': '50',
+        'apikey': _apiKey,
+      };
+
+      final uri = Uri.parse(
+        '$_baseUrl/search',
+      ).replace(queryParameters: queryParams);
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final articles = (data['articles'] as List)
+            .map((article) => _convertToNewsArticle(article))
+            .where((article) => article != null)
+            .cast<NewsArticle>()
+            .toList();
+
+        _cachedArticles = articles;
+        _error = null;
+      } else {
+        _error = 'Failed to load news. Status: ${response.statusCode}';
+        _cachedArticles = _getStaticArticles();
+      }
+    } catch (e) {
+      _error = 'Error fetching news: $e';
+      _cachedArticles = _getStaticArticles();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Convert News API article to NewsArticle model
+  NewsArticle? _convertToNewsArticle(Map<String, dynamic> apiArticle) {
+    try {
+      final title = apiArticle['title'] as String?;
+      final description = apiArticle['description'] as String?;
+      final content = apiArticle['content'] as String?;
+      final imageUrl =
+          apiArticle['image'] as String?; // GNews uses 'image' not 'urlToImage'
+      final source = apiArticle['source']?['name'] as String?;
+      final publishedAt = apiArticle['publishedAt'] as String?;
+
+      // Skip articles with missing essential data
+      if (title == null || title.isEmpty) return null;
+
+      // GNews API truncates content, so combine description and content for better display
+      String fullContent = '';
+      if (content != null && content.isNotEmpty) {
+        // Remove the truncation marker if present
+        fullContent = content.replaceAll('[+', '').replaceAll(' chars]', '');
+      }
+
+      // If content is still too short, use description as well
+      if (fullContent.length < 200 && description != null) {
+        fullContent = description + '\n\n' + fullContent;
+      }
+
+      // If still no good content, use a placeholder
+      if (fullContent.isEmpty) {
+        fullContent =
+            description ??
+            'Full article content not available. Please visit the source for complete information.';
+      }
+
+      return NewsArticle(
+        id: apiArticle['url']?.toString() ?? DateTime.now().toString(),
+        title: title,
+        description: description ?? 'No description available',
+        content: fullContent,
+        imageUrl:
+            imageUrl ??
+            _getDefaultImageForCategory(
+              _categorizeArticle(title, description ?? ''),
+            ),
+        category: _categorizeArticle(title, description ?? ''),
+        source: source ?? 'Unknown',
+        publishedAt: publishedAt != null
+            ? DateTime.parse(publishedAt)
+            : DateTime.now(),
+        tags: _extractTags(title, description ?? ''),
+        viewCount: 0,
+        isBookmarked: false,
+      );
+    } catch (e) {
+      debugPrint('Error converting article: $e');
+      return null;
+    }
+  }
+
+  /// Get default image based on category (fallback when API doesn't provide image)
+  String _getDefaultImageForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'weather':
+        return 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=800&q=80';
+      case 'market':
+        return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80';
+      case 'technology':
+        return 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80';
+      case 'policy':
+        return 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80';
+      case 'crop health':
+        return 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80';
+      default:
+        return 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80';
+    }
+  }
+
+  /// Categorize article based on content
+  String _categorizeArticle(String title, String description) {
+    final text = '$title $description'.toLowerCase();
+
+    if (text.contains('weather') ||
+        text.contains('rain') ||
+        text.contains('monsoon') ||
+        text.contains('climate')) {
+      return 'Weather';
+    } else if (text.contains('market') ||
+        text.contains('price') ||
+        text.contains('export') ||
+        text.contains('trade')) {
+      return 'Market';
+    } else if (text.contains('technology') ||
+        text.contains('ai') ||
+        text.contains('drone') ||
+        text.contains('digital')) {
+      return 'Technology';
+    } else if (text.contains('policy') ||
+        text.contains('government') ||
+        text.contains('scheme') ||
+        text.contains('law')) {
+      return 'Policy';
+    } else if (text.contains('disease') ||
+        text.contains('pest') ||
+        text.contains('health') ||
+        text.contains('crop protection')) {
+      return 'Crop Health';
     }
 
-    return allArticles
+    return 'Market'; // Default category
+  }
+
+  /// Extract relevant tags from article
+  List<String> _extractTags(String title, String description) {
+    final text = '$title $description'.toLowerCase();
+    final tags = <String>[];
+
+    final keywords = [
+      'rice',
+      'wheat',
+      'cotton',
+      'maize',
+      'sugarcane',
+      'farming',
+      'agriculture',
+      'monsoon',
+      'irrigation',
+      'organic',
+      'export',
+      'subsidy',
+      'technology',
+      'ai',
+      'drone',
+    ];
+
+    for (final keyword in keywords) {
+      if (text.contains(keyword)) {
+        tags.add(keyword);
+      }
+    }
+
+    return tags.take(5).toList(); // Limit to 5 tags
+  }
+
+  /// Get articles with current filters
+  List<NewsArticle> getArticles() {
+    if (_selectedCategory == 'All') {
+      return _cachedArticles;
+    }
+
+    return _cachedArticles
         .where((article) => article.category == _selectedCategory)
         .toList();
   }
@@ -58,15 +257,14 @@ class NewsController extends ChangeNotifier {
 
   /// Get bookmarked articles
   List<NewsArticle> getBookmarkedArticles() {
-    final allArticles = _getStaticArticles();
-    return allArticles
+    return _cachedArticles
         .where((article) => _bookmarkedArticles.contains(article.id))
         .toList();
   }
 
   /// Increment view count when article is opened
   void incrementViewCount(String articleId) {
-    // In production, update this in Firebase
+    // In production, update this in Firebase or backend
     notifyListeners();
   }
 
@@ -75,14 +273,19 @@ class NewsController extends ChangeNotifier {
     if (query.isEmpty) return getArticles();
 
     final lowercaseQuery = query.toLowerCase();
-    return _getStaticArticles().where((article) {
+    return _cachedArticles.where((article) {
       return article.title.toLowerCase().contains(lowercaseQuery) ||
           article.description.toLowerCase().contains(lowercaseQuery) ||
           article.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
     }).toList();
   }
 
-  /// Static articles for demo (replace with Firebase stream)
+  /// Refresh articles
+  Future<void> refreshArticles() async {
+    await fetchArticles();
+  }
+
+  /// Static articles for demo/fallback (keep existing method)
   List<NewsArticle> _getStaticArticles() {
     return [
       NewsArticle(
@@ -113,6 +316,7 @@ Contact your local agricultural officer for crop-specific guidance. Emergency he
         tags: ['monsoon', 'rainfall', 'tamil nadu', 'weather alert'],
         viewCount: 1234,
       ),
+      // ...existing static articles...
       NewsArticle(
         id: '2',
         title: 'Rice Prices Surge 15% in Wholesale Markets',
@@ -144,159 +348,6 @@ Consider selling stored produce at current rates. Consult with agricultural mark
         publishedAt: DateTime.now().subtract(const Duration(hours: 5)),
         tags: ['rice', 'prices', 'market', 'wholesale'],
         viewCount: 892,
-      ),
-      NewsArticle(
-        id: '3',
-        title: 'AI-Powered Drone Technology Revolutionizes Pest Detection',
-        description:
-            'New AI drones can detect pest infestations 2 weeks earlier than manual inspection, improving crop yield by 20%.',
-        content:
-            '''Agricultural technology startup AgriDrone has launched an AI-powered drone system that detects pest infestations up to two weeks before they become visible to the naked eye.
-
-**Technology Highlights:**
-- Multispectral imaging with AI analysis
-- Real-time pest hotspot mapping
-- Mobile app integration for instant alerts
-- Coverage: 50 acres per hour
-
-**Impact on Farming:**
-Early trials in Punjab and Haryana showed:
-- 20% increase in crop yield
-- 30% reduction in pesticide usage
-- 50% faster pest detection
-- Cost savings of ₹15,000 per acre
-
-**Availability:**
-Service available on rental basis at ₹500/acre. Government subsidy of 40% available under Digital Agriculture Mission.
-
-**How to Access:**
-Register at www.agridrone.in or contact local Krishi Vigyan Kendra for demonstrations.''',
-        imageUrl:
-            'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=800',
-        category: 'Technology',
-        source: 'AgriTech India',
-        publishedAt: DateTime.now().subtract(const Duration(hours: 8)),
-        tags: ['drone', 'ai', 'pest detection', 'technology'],
-        viewCount: 2156,
-      ),
-      NewsArticle(
-        id: '4',
-        title: 'Government Announces ₹10,000 Crore Farm Insurance Scheme',
-        description:
-            'New comprehensive insurance covers crop damage, livestock loss, and equipment damage with 60% premium subsidy.',
-        content:
-            '''The Ministry of Agriculture has announced a ₹10,000 crore comprehensive farm insurance scheme providing multi-risk coverage to farmers.
-
-**Coverage Details:**
-- Crop loss due to natural calamities
-- Livestock mortality
-- Farm equipment damage
-- Post-harvest losses
-- Income protection during disasters
-
-**Premium Subsidy:**
-- Small farmers (< 2 hectares): 60% subsidy
-- Medium farmers (2-4 hectares): 40% subsidy
-- Large farmers (> 4 hectares): 20% subsidy
-
-**Enrollment Process:**
-1. Visit nearest Jan Seva Kendra
-2. Carry Aadhaar, land records
-3. Complete online form
-4. Pay subsidized premium
-5. Get instant policy certificate
-
-**Claims:**
-Digital claims process through mobile app. Settlement within 15 days of assessment.
-
-**Deadline:** Enroll before January 31, 2026 for kharif season coverage.''',
-        imageUrl:
-            'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800',
-        category: 'Policy',
-        source: 'Ministry of Agriculture',
-        publishedAt: DateTime.now().subtract(const Duration(days: 1)),
-        tags: ['insurance', 'government scheme', 'policy', 'subsidy'],
-        viewCount: 3421,
-      ),
-      NewsArticle(
-        id: '5',
-        title: 'Yellow Rust Alert: Wheat Farmers in Punjab on High Alert',
-        description:
-            'Fungal disease yellow rust detected in several districts. Immediate preventive measures recommended.',
-        content:
-            '''Yellow rust (Puccinia striiformis) has been detected in wheat crops across Ludhiana, Patiala, and Sangrur districts of Punjab, raising concerns among farmers.
-
-**Symptoms to Watch:**
-- Yellow-orange pustules on leaves
-- Parallel stripes pattern
-- Premature leaf drying
-- Reduced grain size
-
-**Immediate Action Required:**
-1. Spray recommended fungicides:
-   - Propiconazole 25% EC @ 500ml/acre
-   - Tebuconazole 50% + Trifloxystrobin 25% WG @ 200g/acre
-2. Ensure proper drainage
-3. Avoid excessive nitrogen fertilizer
-4. Monitor fields every 3 days
-
-**Prevention:**
-- Use resistant varieties: HD-3086, PBW-343
-- Maintain optimal plant spacing
-- Remove infected plants immediately
-- Follow crop rotation
-
-**Expert Consultation:**
-Contact Punjab Agricultural University helpline: 0161-240-1960
-
-**Financial Support:**
-Crop insurance claims accepted for yellow rust damage. Document damage with photos.''',
-        imageUrl:
-            'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800',
-        category: 'Crop Health',
-        source: 'Punjab Agricultural University',
-        publishedAt: DateTime.now().subtract(const Duration(days: 1, hours: 4)),
-        tags: ['wheat', 'disease', 'yellow rust', 'alert', 'punjab'],
-        viewCount: 1876,
-      ),
-      NewsArticle(
-        id: '6',
-        title: 'Cotton Export Demand Boosts Farmer Income by 25%',
-        description:
-            'International demand for Indian cotton reaches 5-year high, creating opportunities for farmers.',
-        content:
-            '''Indian cotton exports have surged to a 5-year high, with international buyers increasing orders by 40% compared to last year, significantly boosting farmer incomes.
-
-**Market Highlights:**
-- Current price: ₹8,200/quintal (raw cotton)
-- Export price: ₹9,500/quintal (premium quality)
-- Major buyers: Bangladesh, China, Vietnam
-- Projected growth: 15% in next quarter
-
-**Quality Requirements for Export:**
-- Fiber length: minimum 28mm
-- Moisture content: below 8%
-- Trash content: below 5%
-- Color: bright white to light spotted
-
-**How to Access Export Market:**
-1. Register with Cotton Corporation of India
-2. Get quality certification from Textiles Committee
-3. Join farmer producer organizations (FPOs)
-4. Contact export houses through e-NAM portal
-
-**Success Story:**
-Farmer cooperative in Vidarbha earned additional ₹12 lakhs through direct export linkage.
-
-**Support Available:**
-APEDA provides technical and financial assistance for export quality production.''',
-        imageUrl:
-            'https://images.unsplash.com/photo-1615460549969-36fa19521a4f?w=800',
-        category: 'Market',
-        source: 'Cotton Association of India',
-        publishedAt: DateTime.now().subtract(const Duration(days: 2)),
-        tags: ['cotton', 'export', 'market', 'prices'],
-        viewCount: 1543,
       ),
     ];
   }
