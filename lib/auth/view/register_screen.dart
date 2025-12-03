@@ -27,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Theme colors for farming app
   static const primaryColor = Color(0xFF2D5016); // Deep green
   static const backgroundColor = Color(0xFFF8F6F0); // Cream
-  static const accentColor = Color(0xFF6B8E23); // Olive green
   static const textColor = Color(0xFF4A4A4A); // Dark gray
 
   @override

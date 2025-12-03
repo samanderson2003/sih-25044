@@ -158,7 +158,7 @@ class FarmDataController {
       // Mock satellite data - replace with actual API call
       await Future.delayed(const Duration(seconds: 2)); // Simulate API call
 
-      // Return estimated soil data with disclaimer
+      // Return estimated soil data with disclaimer (only 6 micronutrients)
       return SoilQualityModel(
         zinc: 0.5 + (latitude % 1) * 2, // Mock values
         iron: 3.5 + (longitude % 1) * 2,
@@ -166,15 +166,8 @@ class FarmDataController {
         manganese: 2.8 + (longitude % 1) * 1.5,
         boron: 0.8 + (latitude % 1) * 0.5,
         sulfur: 12.5 + (longitude % 1) * 5,
-        soilType: 'Loamy',
-        ph: 6.5 + (latitude % 1),
-        organicCarbon: 0.5 + (longitude % 1) * 0.3,
-        nitrogen: 220 + (latitude % 1) * 50,
-        phosphorus: 18 + (longitude % 1) * 10,
-        potassium: 180 + (latitude % 1) * 40,
         dataSource: 'satellite',
-        isAccurate: false,
-        testDate: DateTime.now(),
+        fetchedAt: DateTime.now(),
       );
     } catch (e) {
       print('Error fetching satellite data: $e');

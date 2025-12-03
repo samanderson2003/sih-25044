@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controller/profile_controller.dart';
-import '../../prior_data/view/data_collection_welcome_screen.dart';
+import '../../prior_data/view/simplified_data_collection_flow.dart';
+import '../../prior_data/controller/farm_data_controller.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -12,6 +13,7 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   final _controller = ProfileController();
+  final _farmDataController = FarmDataController();
   final _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isSaving = false;
@@ -172,12 +174,65 @@ class _ProfileViewState extends State<ProfileView> {
                                 ),
                               const SizedBox(height: 15),
 
-                              if (farmData['soilQuality'] != null)
+                              if (farmData['soilQuality'] != null) ...[
+                                // Warning banner for satellite data
+                                if (farmData['soilQuality']['dataSource'] ==
+                                    'satellite')
+                                  Container(
+                                    padding: const EdgeInsets.all(15),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Colors.orange.shade700,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: Colors.orange.shade700,
+                                          size: 28,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Using Satellite Data',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.orange.shade900,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'For best crop predictions, please update with actual lab test results',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.orange.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (farmData['soilQuality']['dataSource'] ==
+                                    'satellite')
+                                  const SizedBox(height: 15),
+
                                 _buildFarmInfoCard(
                                   'Soil Quality',
                                   farmData['soilQuality'],
                                   Icons.terrain,
                                 ),
+                              ],
                               const SizedBox(height: 15),
 
                               if (farmData['cropDetails'] != null)
@@ -228,7 +283,7 @@ class _ProfileViewState extends State<ProfileView> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const DataCollectionWelcomeScreen(),
+                                                const SimplifiedDataCollectionFlow(),
                                           ),
                                         );
                                       },
@@ -316,12 +371,19 @@ class _ProfileViewState extends State<ProfileView> {
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton.icon(
-                                  onPressed: () {
+                                  onPressed: () async {
+                                    // Fetch existing farm data
+                                    final existingData =
+                                        await _farmDataController.getFarmData();
+                                    if (!mounted) return;
+
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const DataCollectionWelcomeScreen(),
+                                            SimplifiedDataCollectionFlow(
+                                              initialFarmData: existingData,
+                                            ),
                                       ),
                                     );
                                   },

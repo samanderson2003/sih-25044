@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../controller/crop_yield_controller.dart';
 import '../model/crop_yield_model.dart';
+import '../../prior_data/controller/farm_data_controller.dart';
 
 class CropYieldPredictionScreen extends StatefulWidget {
   const CropYieldPredictionScreen({super.key});
@@ -13,42 +14,24 @@ class CropYieldPredictionScreen extends StatefulWidget {
 class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
   final _formKey = GlobalKey<FormState>();
   final CropYieldController _controller = CropYieldController();
+  final FarmDataController _farmDataController = FarmDataController();
 
   bool _isLoading = false;
+  bool _isLoadingFarmData = true;
   CropPredictionResponse? _predictionResult;
 
-  // Form controllers with default values
-  final TextEditingController _areaController = TextEditingController(
-    text: '2.0',
-  );
-  final TextEditingController _tavgController = TextEditingController(
-    text: '28.0',
-  );
-  final TextEditingController _tminController = TextEditingController(
-    text: '24.0',
-  );
-  final TextEditingController _tmaxController = TextEditingController(
-    text: '33.0',
-  );
-  final TextEditingController _prcpController = TextEditingController(
-    text: '5.5',
-  );
-  final TextEditingController _znController = TextEditingController(
-    text: '80.0',
-  );
-  final TextEditingController _feController = TextEditingController(
-    text: '94.0',
-  );
-  final TextEditingController _cuController = TextEditingController(
-    text: '90.0',
-  );
-  final TextEditingController _mnController = TextEditingController(
-    text: '97.0',
-  );
-  final TextEditingController _bController = TextEditingController(
-    text: '98.0',
-  );
-  final TextEditingController _sController = TextEditingController(text: '0.7');
+  // Form controllers - will be filled from user's saved farm data
+  final TextEditingController _areaController = TextEditingController();
+  final TextEditingController _tavgController = TextEditingController();
+  final TextEditingController _tminController = TextEditingController();
+  final TextEditingController _tmaxController = TextEditingController();
+  final TextEditingController _prcpController = TextEditingController();
+  final TextEditingController _znController = TextEditingController();
+  final TextEditingController _feController = TextEditingController();
+  final TextEditingController _cuController = TextEditingController();
+  final TextEditingController _mnController = TextEditingController();
+  final TextEditingController _bController = TextEditingController();
+  final TextEditingController _sController = TextEditingController();
 
   String _selectedCrop = 'Rice';
   String _selectedSeason = 'Kharif';
@@ -56,6 +39,92 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
 
   final List<String> _crops = ['Rice', 'Wheat', 'Maize', 'Cotton', 'Sugarcane'];
   final List<String> _seasons = ['Kharif', 'Rabi', 'Zaid'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFarmDataFromProfile();
+  }
+
+  Future<void> _loadFarmDataFromProfile() async {
+    setState(() => _isLoadingFarmData = true);
+
+    try {
+      final farmData = await _farmDataController.getFarmData();
+
+      if (farmData != null && mounted) {
+        setState(() {
+          // Farm basics
+          _areaController.text = farmData.farmBasics.landSize.toString();
+
+          // Set first crop if multiple crops exist
+          if (farmData.farmBasics.crops.isNotEmpty) {
+            final userCrop = farmData.farmBasics.crops.first;
+            if (_crops.contains(userCrop)) {
+              _selectedCrop = userCrop;
+            }
+          }
+
+          // Climate data
+          if (farmData.climateData != null) {
+            _tavgController.text = farmData.climateData!.tavgClimate
+                .toStringAsFixed(1);
+            _tminController.text = farmData.climateData!.tminClimate
+                .toStringAsFixed(1);
+            _tmaxController.text = farmData.climateData!.tmaxClimate
+                .toStringAsFixed(1);
+            _prcpController.text = farmData.climateData!.prcpAnnualClimate
+                .toStringAsFixed(1);
+          }
+
+          // Soil quality
+          _znController.text = (farmData.soilQuality.zinc ?? 75.0)
+              .toStringAsFixed(1);
+          _feController.text = (farmData.soilQuality.iron ?? 85.0)
+              .toStringAsFixed(1);
+          _cuController.text = (farmData.soilQuality.copper ?? 80.0)
+              .toStringAsFixed(1);
+          _mnController.text = (farmData.soilQuality.manganese ?? 85.0)
+              .toStringAsFixed(1);
+          _bController.text = (farmData.soilQuality.boron ?? 80.0)
+              .toStringAsFixed(1);
+          _sController.text = (farmData.soilQuality.sulfur ?? 0.5)
+              .toStringAsFixed(2);
+
+          _isLoadingFarmData = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Farm data loaded from your profile'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // No farm data - use defaults
+        setState(() {
+          _areaController.text = '2.0';
+          _tavgController.text = '28.0';
+          _tminController.text = '24.0';
+          _tmaxController.text = '33.0';
+          _prcpController.text = '5.5';
+          _znController.text = '75.0';
+          _feController.text = '85.0';
+          _cuController.text = '80.0';
+          _mnController.text = '85.0';
+          _bController.text = '80.0';
+          _sController.text = '0.5';
+          _isLoadingFarmData = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading farm data: $e');
+      setState(() => _isLoadingFarmData = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -166,7 +235,6 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Info Banner
-
             const SizedBox(height: 20),
 
             _buildSectionTitle('Farm Details'),

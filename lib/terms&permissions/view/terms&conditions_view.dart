@@ -17,7 +17,6 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
   // Theme colors
   static const primaryColor = Color(0xFF2D5016);
   static const backgroundColor = Color(0xFFF8F6F0);
-  static const accentColor = Color(0xFF6B8E23);
   static const textColor = Color(0xFF4A4A4A);
 
   Future<void> _handleAccept() async {

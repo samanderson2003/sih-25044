@@ -5,7 +5,7 @@ import '../../terms&permissions/view/terms&conditions_view.dart';
 import '../../terms&permissions/view/permissions_screen.dart';
 import '../../terms&permissions/controller/terms&conditions_controller.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
-import '../../prior_data/view/data_collection_welcome_screen.dart';
+import '../../prior_data/view/simplified_data_collection_flow.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const DataCollectionWelcomeScreen(),
+                builder: (context) => const SimplifiedDataCollectionFlow(),
               ),
             );
           } else {
@@ -182,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const DataCollectionWelcomeScreen(),
+                builder: (context) => const SimplifiedDataCollectionFlow(),
               ),
             );
           } else {

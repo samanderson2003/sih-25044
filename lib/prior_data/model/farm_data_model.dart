@@ -1,18 +1,17 @@
+// Simplified Farm Data Model - Only ML Model Required Fields
 class FarmDataModel {
   final String userId;
-  final LandDetailsModel landDetails;
+  final FarmBasicsModel farmBasics;
   final SoilQualityModel soilQuality;
-  final PastDataModel pastData;
-  final CropDetailsModel cropDetails;
+  final ClimateDataModel? climateData; // Auto-fetched from NASA API
   final DateTime createdAt;
   final DateTime? updatedAt;
 
   FarmDataModel({
     required this.userId,
-    required this.landDetails,
+    required this.farmBasics,
     required this.soilQuality,
-    required this.pastData,
-    required this.cropDetails,
+    this.climateData,
     required this.createdAt,
     this.updatedAt,
   });
@@ -20,10 +19,9 @@ class FarmDataModel {
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
-      'landDetails': landDetails.toJson(),
+      'farmBasics': farmBasics.toJson(),
       'soilQuality': soilQuality.toJson(),
-      'pastData': pastData.toJson(),
-      'cropDetails': cropDetails.toJson(),
+      'climateData': climateData?.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -32,14 +30,57 @@ class FarmDataModel {
   factory FarmDataModel.fromJson(Map<String, dynamic> json) {
     return FarmDataModel(
       userId: json['userId'] ?? '',
-      landDetails: LandDetailsModel.fromJson(json['landDetails'] ?? {}),
+      farmBasics: FarmBasicsModel.fromJson(json['farmBasics'] ?? {}),
       soilQuality: SoilQualityModel.fromJson(json['soilQuality'] ?? {}),
-      pastData: PastDataModel.fromJson(json['pastData'] ?? {}),
-      cropDetails: CropDetailsModel.fromJson(json['cropDetails'] ?? {}),
+      climateData: json['climateData'] != null
+          ? ClimateDataModel.fromJson(json['climateData'])
+          : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
+    );
+  }
+}
+
+// Step 1: Farm & Crop Basics
+class FarmBasicsModel {
+  final double landSize; // in acres or cents
+  final String landSizeUnit; // 'acres' or 'cents'
+  final LocationModel location;
+  final List<String> crops; // Multiple crops: Rice, Wheat, Maize, etc.
+
+  FarmBasicsModel({
+    required this.landSize,
+    this.landSizeUnit = 'acres',
+    required this.location,
+    required this.crops,
+  });
+
+  // Convert to hectares for ML model
+  double get landSizeInHectares {
+    if (landSizeUnit == 'cents') {
+      return landSize * 0.00404686; // 1 cent = 0.00404686 hectares
+    } else {
+      return landSize * 0.404686; // 1 acre = 0.404686 hectares
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'landSize': landSize,
+      'landSizeUnit': landSizeUnit,
+      'location': location.toJson(),
+      'crops': crops,
+    };
+  }
+
+  factory FarmBasicsModel.fromJson(Map<String, dynamic> json) {
+    return FarmBasicsModel(
+      landSize: (json['landSize'] ?? 0).toDouble(),
+      landSizeUnit: json['landSizeUnit'] ?? 'acres',
+      location: LocationModel.fromJson(json['location'] ?? {}),
+      crops: json['crops'] != null ? List<String>.from(json['crops']) : [],
     );
   }
 }
@@ -87,31 +128,22 @@ class LandDetailsModel {
 class LocationModel {
   final double latitude;
   final double longitude;
-  final String? address;
-  final String? city;
   final String? state;
-  final String? pincode;
-  final bool isManuallyMarked;
+  final String? district;
 
   LocationModel({
     required this.latitude,
     required this.longitude,
-    this.address,
-    this.city,
     this.state,
-    this.pincode,
-    this.isManuallyMarked = false,
+    this.district,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'latitude': latitude,
       'longitude': longitude,
-      'address': address,
-      'city': city,
       'state': state,
-      'pincode': pincode,
-      'isManuallyMarked': isManuallyMarked,
+      'district': district,
     };
   }
 
@@ -119,32 +151,64 @@ class LocationModel {
     return LocationModel(
       latitude: (json['latitude'] ?? 0).toDouble(),
       longitude: (json['longitude'] ?? 0).toDouble(),
-      address: json['address'],
-      city: json['city'],
       state: json['state'],
-      pincode: json['pincode'],
-      isManuallyMarked: json['isManuallyMarked'] ?? false,
+      district: json['district'],
     );
   }
 }
 
+// Climate Data Model - Auto-fetched from NASA POWER API
+class ClimateDataModel {
+  final double tavgClimate; // 20-year average temperature
+  final double tminClimate; // 20-year average minimum temp
+  final double tmaxClimate; // 20-year average maximum temp
+  final double prcpAnnualClimate; // 20-year average daily rainfall (mm)
+  final DateTime fetchedAt;
+
+  ClimateDataModel({
+    required this.tavgClimate,
+    required this.tminClimate,
+    required this.tmaxClimate,
+    required this.prcpAnnualClimate,
+    required this.fetchedAt,
+  });
+
+  // Calculated field for ML model
+  double get tempRangeClimate => tmaxClimate - tminClimate;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'tavgClimate': tavgClimate,
+      'tminClimate': tminClimate,
+      'tmaxClimate': tmaxClimate,
+      'prcpAnnualClimate': prcpAnnualClimate,
+      'fetchedAt': fetchedAt.toIso8601String(),
+    };
+  }
+
+  factory ClimateDataModel.fromJson(Map<String, dynamic> json) {
+    return ClimateDataModel(
+      tavgClimate: (json['tavgClimate'] ?? 0).toDouble(),
+      tminClimate: (json['tminClimate'] ?? 0).toDouble(),
+      tmaxClimate: (json['tmaxClimate'] ?? 0).toDouble(),
+      prcpAnnualClimate: (json['prcpAnnualClimate'] ?? 0).toDouble(),
+      fetchedAt: json['fetchedAt'] != null
+          ? DateTime.parse(json['fetchedAt'])
+          : DateTime.now(),
+    );
+  }
+}
+
+// Step 2: Simplified Soil Quality - Only 6 Essential Nutrients
 class SoilQualityModel {
-  final double? zinc; // Zn%
-  final double? iron; // Fe%
-  final double? copper; // Cu%
-  final double? manganese; // Mn%
-  final double? boron; // B%
-  final double? sulfur; // S%
-  final String? soilType;
-  final double? ph;
-  final double? organicCarbon;
-  final double? nitrogen;
-  final double? phosphorus;
-  final double? potassium;
-  final String dataSource; // manual, satellite, test_center
-  final bool isAccurate; // false for satellite data
-  final DateTime? testDate;
-  final String? testCenterName;
+  final double? zinc; // Zn% - Required for ML
+  final double? iron; // Fe% - Required for ML
+  final double? copper; // Cu% - Required for ML
+  final double? manganese; // Mn% - Required for ML
+  final double? boron; // B% - Required for ML
+  final double? sulfur; // S% - Required for ML
+  final String dataSource; // 'manual', 'satellite', 'regional_default'
+  final DateTime? fetchedAt;
 
   SoilQualityModel({
     this.zinc,
@@ -153,26 +217,24 @@ class SoilQualityModel {
     this.manganese,
     this.boron,
     this.sulfur,
-    this.soilType,
-    this.ph,
-    this.organicCarbon,
-    this.nitrogen,
-    this.phosphorus,
-    this.potassium,
     this.dataSource = 'manual',
-    this.isAccurate = true,
-    this.testDate,
-    this.testCenterName,
+    this.fetchedAt,
   });
 
+  // Check if all 6 essential nutrients are present
   bool get isComplete {
     return zinc != null &&
         iron != null &&
         copper != null &&
         manganese != null &&
         boron != null &&
-        sulfur != null &&
-        soilType != null;
+        sulfur != null;
+  }
+
+  // Calculate nutrient index for ML model
+  double get nutrientIndex {
+    if (!isComplete) return 0.0;
+    return (zinc! + iron! + copper!) / 3;
   }
 
   Map<String, dynamic> toJson() {
@@ -183,16 +245,8 @@ class SoilQualityModel {
       'manganese': manganese,
       'boron': boron,
       'sulfur': sulfur,
-      'soilType': soilType,
-      'ph': ph,
-      'organicCarbon': organicCarbon,
-      'nitrogen': nitrogen,
-      'phosphorus': phosphorus,
-      'potassium': potassium,
       'dataSource': dataSource,
-      'isAccurate': isAccurate,
-      'testDate': testDate?.toIso8601String(),
-      'testCenterName': testCenterName,
+      'fetchedAt': fetchedAt?.toIso8601String(),
     };
   }
 
@@ -204,143 +258,30 @@ class SoilQualityModel {
       manganese: json['manganese']?.toDouble(),
       boron: json['boron']?.toDouble(),
       sulfur: json['sulfur']?.toDouble(),
-      soilType: json['soilType'],
-      ph: json['ph']?.toDouble(),
-      organicCarbon: json['organicCarbon']?.toDouble(),
-      nitrogen: json['nitrogen']?.toDouble(),
-      phosphorus: json['phosphorus']?.toDouble(),
-      potassium: json['potassium']?.toDouble(),
       dataSource: json['dataSource'] ?? 'manual',
-      isAccurate: json['isAccurate'] ?? true,
-      testDate: json['testDate'] != null
-          ? DateTime.parse(json['testDate'])
+      fetchedAt: json['fetchedAt'] != null
+          ? DateTime.parse(json['fetchedAt'])
           : null,
-      testCenterName: json['testCenterName'],
+    );
+  }
+
+  // Create from regional defaults
+  factory SoilQualityModel.withDefaults(String? state) {
+    // Default values based on common Indian soil conditions
+    return SoilQualityModel(
+      zinc: 75.0,
+      iron: 85.0,
+      copper: 80.0,
+      manganese: 85.0,
+      boron: 80.0,
+      sulfur: 0.5,
+      dataSource: 'regional_default',
+      fetchedAt: DateTime.now(),
     );
   }
 }
 
-class PastDataModel {
-  final List<CropHistoryModel> cropHistory;
-  final double? averageYield; // tons per acre
-  final List<String>? commonPests;
-  final List<String>? commonDiseases;
-  final String? fertilizersUsed;
-
-  PastDataModel({
-    this.cropHistory = const [],
-    this.averageYield,
-    this.commonPests,
-    this.commonDiseases,
-    this.fertilizersUsed,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'cropHistory': cropHistory.map((e) => e.toJson()).toList(),
-      'averageYield': averageYield,
-      'commonPests': commonPests,
-      'commonDiseases': commonDiseases,
-      'fertilizersUsed': fertilizersUsed,
-    };
-  }
-
-  factory PastDataModel.fromJson(Map<String, dynamic> json) {
-    return PastDataModel(
-      cropHistory:
-          (json['cropHistory'] as List<dynamic>?)
-              ?.map((e) => CropHistoryModel.fromJson(e))
-              .toList() ??
-          [],
-      averageYield: json['averageYield']?.toDouble(),
-      commonPests: (json['commonPests'] as List<dynamic>?)?.cast<String>(),
-      commonDiseases: (json['commonDiseases'] as List<dynamic>?)
-          ?.cast<String>(),
-      fertilizersUsed: json['fertilizersUsed'],
-    );
-  }
-}
-
-class CropHistoryModel {
-  final String cropName;
-  final String season; // Kharif, Rabi, Zaid
-  final int year;
-  final double? yield; // tons
-  final String? notes;
-
-  CropHistoryModel({
-    required this.cropName,
-    required this.season,
-    required this.year,
-    this.yield,
-    this.notes,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'cropName': cropName,
-      'season': season,
-      'year': year,
-      'yield': yield,
-      'notes': notes,
-    };
-  }
-
-  factory CropHistoryModel.fromJson(Map<String, dynamic> json) {
-    return CropHistoryModel(
-      cropName: json['cropName'] ?? '',
-      season: json['season'] ?? '',
-      year: json['year'] ?? DateTime.now().year,
-      yield: json['yield']?.toDouble(),
-      notes: json['notes'],
-    );
-  }
-}
-
-class CropDetailsModel {
-  final String currentCropName;
-  final String season; // Kharif, Rabi, Zaid
-  final DateTime sowingDate;
-  final DateTime? expectedHarvestDate;
-  final String? variety;
-  final double? seedRate; // kg per acre
-
-  CropDetailsModel({
-    required this.currentCropName,
-    required this.season,
-    required this.sowingDate,
-    this.expectedHarvestDate,
-    this.variety,
-    this.seedRate,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'currentCropName': currentCropName,
-      'season': season,
-      'sowingDate': sowingDate.toIso8601String(),
-      'expectedHarvestDate': expectedHarvestDate?.toIso8601String(),
-      'variety': variety,
-      'seedRate': seedRate,
-    };
-  }
-
-  factory CropDetailsModel.fromJson(Map<String, dynamic> json) {
-    return CropDetailsModel(
-      currentCropName: json['currentCropName'] ?? '',
-      season: json['season'] ?? '',
-      sowingDate: json['sowingDate'] != null
-          ? DateTime.parse(json['sowingDate'])
-          : DateTime.now(),
-      expectedHarvestDate: json['expectedHarvestDate'] != null
-          ? DateTime.parse(json['expectedHarvestDate'])
-          : null,
-      variety: json['variety'],
-      seedRate: json['seedRate']?.toDouble(),
-    );
-  }
-}
-
+// Soil Test Center Model - Kept for reference
 class SoilTestCenter {
   final String name;
   final String address;
@@ -383,4 +324,21 @@ class SoilTestCenter {
       timing: json['timing'],
     );
   }
+}
+
+// Helper function to auto-detect season based on current month
+String getSeasonFromMonth(int month) {
+  if (month >= 6 && month <= 11) {
+    return 'Kharif'; // June to November (Monsoon crops)
+  } else if (month >= 12 || month <= 3) {
+    return 'Rabi'; // December to March (Winter crops)
+  } else {
+    return 'Zaid'; // April to May (Summer crops)
+  }
+}
+
+// Helper function to detect current season
+String getCurrentSeason() {
+  final now = DateTime.now();
+  return getSeasonFromMonth(now.month);
 }
