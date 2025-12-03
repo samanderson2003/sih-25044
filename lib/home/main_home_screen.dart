@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../profile/view/profile_view.dart';
 import '../../crop_yield_prediction/view/prediction_with_detection_screen.dart';
+import '../../connections/view/connections_screen.dart';
 import '../home/view/screens/home_screen.dart' as crop_home;
 
 class MainHomeScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   final List<Widget> _screens = [
     const crop_home.HomeScreen(), // Crop management home
     const PredictionWithDetectionScreen(), // Combined Prediction + Detection
+    const ConnectionsScreen(), // AgriConnect - Map, Chat, News
     const ProfileView(),
   ];
 
@@ -39,6 +41,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             icon: Icon(Icons.analytics),
             label: 'Prediction',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.public), label: 'Connect'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
