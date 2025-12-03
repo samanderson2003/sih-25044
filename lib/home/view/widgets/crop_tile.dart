@@ -31,15 +31,15 @@ class CropTile extends StatelessWidget {
               ? [
                   BoxShadow(
                     color: crop.themeColor.withOpacity(0.3),
-                    blurRadius: 8,
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
         ),

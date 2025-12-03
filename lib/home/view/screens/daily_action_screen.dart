@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import '../../controller/home_controller.dart';
 import '../../model/daily_action_model.dart';
-import 'package:intl/intl.dart';
 
 class DailyActionScreen extends StatelessWidget {
   final DateTime date;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../model/weather_model.dart';
 
 class WeatherIndicator extends StatelessWidget {
@@ -13,22 +14,19 @@ class WeatherIndicator extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF2D5016), // Primary dark green
-            Color(0xFF3D6B23), // Lighter green
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: const Color(0xFFE8F5E9).withOpacity(0.6),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFF2D5016).withOpacity(0.1),
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -36,72 +34,57 @@ class WeatherIndicator extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Main temperature and location
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        weather!.location,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
                   Text(
-                    '${weather!.temperature.toStringAsFixed(1)}°C',
+                    '${weather!.temperature.toStringAsFixed(0)}°',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF1565C0),
                       fontSize: 48,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w300,
+                      height: 1.0,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    weather!.condition,
+                    weather!.location,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
+                      color: Color(0xFF64B5F6),
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
-              _getWeatherIcon(weather!.condition),
+              // Weather animation
+              _getWeatherAnimation(weather!.condition),
             ],
           ),
-          const SizedBox(height: 20),
-          const Divider(color: Colors.white54),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 16),
+
+          // Weather details grid - only Soil temp and Humidity
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildWeatherDetail(
-                Icons.water_drop,
-                '${weather!.humidity.toInt()}%',
-                'Humidity',
+              Expanded(
+                child: _buildWeatherDetailCard(
+                  Icons.thermostat_outlined,
+                  'Soil temp',
+                  '+${(weather!.temperature - 5).toStringAsFixed(0)} C',
+                ),
               ),
-              _buildWeatherDetail(
-                Icons.cloud,
-                '${weather!.rainfallProbability.toInt()}%',
-                'Rain Chance',
-              ),
-              _buildWeatherDetail(
-                Icons.air,
-                '${weather!.windSpeed.toInt()} km/h',
-                'Wind',
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildWeatherDetailCard(
+                  Icons.water_drop_outlined,
+                  'Humidity',
+                  '${weather!.humidity.toInt()}%',
+                ),
               ),
             ],
           ),
@@ -110,49 +93,83 @@ class WeatherIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherDetail(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+  Widget _buildWeatherDetailCard(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Color(0xFFBBDEFB).withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF90CAF9).withOpacity(0.3),
+                  Color(0xFFE3F2FD).withOpacity(0.3),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: const Color(0xFF1976D2)),
           ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF64B5F6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color(0xFF1565C0),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _getWeatherIcon(String condition) {
-    IconData icon;
+  Widget _getWeatherAnimation(String condition) {
+    String animationPath;
+
     switch (condition.toLowerCase()) {
       case 'sunny':
       case 'clear':
-        icon = Icons.wb_sunny;
+        animationPath = 'assets/sunny.json';
         break;
       case 'cloudy':
       case 'partly cloudy':
-        icon = Icons.wb_cloudy;
+        animationPath = 'assets/Cloudy.json';
         break;
       case 'rainy':
       case 'rain':
-        icon = Icons.water_drop;
-        break;
-      case 'stormy':
-        icon = Icons.thunderstorm;
+        animationPath = 'assets/Rainy.json';
         break;
       default:
-        icon = Icons.wb_cloudy;
+        animationPath = 'assets/Cloudy.json';
     }
 
-    return Icon(icon, size: 80, color: Colors.white.withOpacity(0.8));
+    return SizedBox(
+      width: 100,
+      height: 100,
+      child: Lottie.asset(animationPath, fit: BoxFit.contain),
+    );
   }
 }

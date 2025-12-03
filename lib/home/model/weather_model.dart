@@ -59,3 +59,18 @@ class WeatherAlert {
 }
 
 enum AlertSeverity { low, medium, high, critical }
+
+extension AlertSeverityExtension on AlertSeverity {
+  String get label {
+    switch (this) {
+      case AlertSeverity.critical:
+        return 'CRITICAL';
+      case AlertSeverity.high:
+        return 'HIGH';
+      case AlertSeverity.medium:
+        return 'MEDIUM';
+      case AlertSeverity.low:
+        return 'LOW';
+    }
+  }
+}
