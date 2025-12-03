@@ -1,3 +1,5 @@
+// lib/crop_yield_prediction/view/soil_quality_screen.dart
+
 import 'package:flutter/material.dart';
 import '../controller/farm_data_controller.dart';
 import '../model/farm_data_model.dart';
@@ -81,51 +83,114 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
   Future<void> _loadSatelliteData() async {
     setState(() => _isLoadingSatelliteData = true);
 
-    final satelliteData = await _controller.getSoilDataFromSatellite(
-      widget.landDetails.location.latitude,
-      widget.landDetails.location.longitude,
-    );
-
-    setState(() => _isLoadingSatelliteData = false);
-
-    if (satelliteData != null && mounted) {
-      // Show disclaimer dialog
-      final confirmed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-              SizedBox(width: 8),
-              Text('Satellite Data Disclaimer'),
-            ],
-          ),
-          content: const Text(
-            'Satellite-based soil data is an estimate and may not be as accurate as laboratory testing.\n\n'
-            'We recommend:\n'
-            '• Using this data temporarily\n'
-            '• Getting soil tested at a certified lab as soon as possible\n'
-            '• Updating the values with actual test results\n\n'
-            'Do you want to proceed with satellite data?',
-            style: TextStyle(fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Use Satellite Data'),
-            ),
-          ],
-        ),
+    try {
+      final satelliteData = await _controller.getSoilDataFromSatellite(
+        widget.landDetails.location.latitude,
+        widget.landDetails.location.longitude,
       );
 
-      if (confirmed == true) {
-        _fillSatelliteData(satelliteData);
+      setState(() => _isLoadingSatelliteData = false);
+
+      if (satelliteData != null && mounted) {
+        // Show disclaimer dialog
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange,
+                  size: 28,
+                ),
+                SizedBox(width: 8),
+                Expanded(child: Text('Satellite Data Disclaimer')),
+              ],
+            ),
+            content: const SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Satellite-based soil data provides estimates:\n',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Text('✅ RELIABLE (70-85% accuracy):'),
+                  Text('  • pH level', style: TextStyle(fontSize: 13)),
+                  Text('  • Organic carbon', style: TextStyle(fontSize: 13)),
+                  Text('  • Soil texture\n', style: TextStyle(fontSize: 13)),
+                  Text('⚠️ ESTIMATED (50-70% accuracy):'),
+                  Text(
+                    '  • Micronutrients (Zn, Fe, Cu, Mn, B, S)',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  Text(
+                    '  • Based on soil properties\n',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  Text('❌ NOT AVAILABLE:'),
+                  Text(
+                    '  • Available Phosphorus (P)',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  Text(
+                    '  • Available Potassium (K)\n',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  Text(
+                    'For accurate crop planning, we STRONGLY recommend:\n'
+                    '• Getting soil tested at a certified lab\n'
+                    '• Updating these values with actual results\n'
+                    '• Using satellite data only temporarily\n\n'
+                    'Proceed with satellite estimates?',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Use Estimates'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          _fillSatelliteData(satelliteData);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Failed to fetch satellite data. Please try again or enter manually.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoadingSatelliteData = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -151,7 +216,7 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Satellite data loaded. Please update with lab results when available.',
+          '✅ Satellite data loaded. Please update with lab results when available.',
         ),
         backgroundColor: Colors.orange,
         duration: Duration(seconds: 4),
@@ -192,7 +257,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
       testDate: DateTime.now(),
     );
 
-    // Return data back to welcome screen
     Navigator.pop(context, soilData);
   }
 
@@ -224,7 +288,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
       ),
       body: Column(
         children: [
-          // Progress indicator
           Container(
             color: primaryColor,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -256,7 +319,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Data source options
                     const Text(
                       'How would you like to provide soil data?',
                       style: TextStyle(
@@ -311,7 +373,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Soil Type
                     DropdownButtonFormField<String>(
                       value: _soilType,
                       decoration: _inputDecoration('Soil Type*'),
@@ -329,7 +390,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Micronutrients Section
                     _buildSectionHeader('Micronutrients (%)'),
                     _buildParameterRow(
                       _zincController,
@@ -352,7 +412,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
 
                     const SizedBox(height: 16),
 
-                    // NPK Section
                     _buildSectionHeader('Macronutrients (kg/ha)'),
                     _buildParameterRow(
                       _nitrogenController,
@@ -367,7 +426,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Other Parameters
                     _buildSectionHeader('Other Parameters'),
                     _buildParameterRow(
                       _phController,
@@ -411,7 +469,6 @@ class _SoilQualityScreenState extends State<SoilQualityScreen> {
             ),
           ),
 
-          // Next button
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(

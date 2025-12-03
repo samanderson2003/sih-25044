@@ -18,26 +18,36 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
   CropPredictionResponse? _predictionResult;
 
   // Form controllers with default values
-  final TextEditingController _areaController =
-      TextEditingController(text: '2.0');
-  final TextEditingController _tavgController =
-      TextEditingController(text: '28.0');
-  final TextEditingController _tminController =
-      TextEditingController(text: '24.0');
-  final TextEditingController _tmaxController =
-      TextEditingController(text: '33.0');
-  final TextEditingController _prcpController =
-      TextEditingController(text: '5.5');
-  final TextEditingController _znController =
-      TextEditingController(text: '80.0');
-  final TextEditingController _feController =
-      TextEditingController(text: '94.0');
-  final TextEditingController _cuController =
-      TextEditingController(text: '90.0');
-  final TextEditingController _mnController =
-      TextEditingController(text: '97.0');
-  final TextEditingController _bController =
-      TextEditingController(text: '98.0');
+  final TextEditingController _areaController = TextEditingController(
+    text: '2.0',
+  );
+  final TextEditingController _tavgController = TextEditingController(
+    text: '28.0',
+  );
+  final TextEditingController _tminController = TextEditingController(
+    text: '24.0',
+  );
+  final TextEditingController _tmaxController = TextEditingController(
+    text: '33.0',
+  );
+  final TextEditingController _prcpController = TextEditingController(
+    text: '5.5',
+  );
+  final TextEditingController _znController = TextEditingController(
+    text: '80.0',
+  );
+  final TextEditingController _feController = TextEditingController(
+    text: '94.0',
+  );
+  final TextEditingController _cuController = TextEditingController(
+    text: '90.0',
+  );
+  final TextEditingController _mnController = TextEditingController(
+    text: '97.0',
+  );
+  final TextEditingController _bController = TextEditingController(
+    text: '98.0',
+  );
   final TextEditingController _sController = TextEditingController(text: '0.7');
 
   String _selectedCrop = 'Rice';
@@ -142,19 +152,19 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crop Yield Prediction'),
-        backgroundColor: const Color(0xFF2D5016),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.wifi),
-            onPressed: _testConnection,
-            tooltip: 'Test API Connection',
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF8F6F0),
       body: _predictionResult == null ? _buildInputForm() : _buildResultsView(),
+      floatingActionButton: _predictionResult == null
+          ? FloatingActionButton.extended(
+              onPressed: _testConnection,
+              backgroundColor: const Color(0xFF2D5016),
+              icon: const Icon(Icons.wifi, color: Colors.white),
+              label: const Text(
+                'Test API',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          : null,
     );
   }
 
@@ -181,8 +191,10 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                   Expanded(
                     child: Text(
                       'Default values are pre-filled for testing. Tap the WiFi icon to test API connection.',
-                      style:
-                          TextStyle(color: Colors.blue.shade900, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.blue.shade900,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -323,8 +335,10 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       'Predict Yield',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
             ),
           ],
@@ -371,14 +385,22 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           _buildResultCard(
             title: '🌾 Yield Forecast',
             children: [
-              _buildResultRow('Per Hectare',
-                  '${result.yieldForecast.perHectareTonnes.toStringAsFixed(2)} tonnes'),
-              _buildResultRow('Total Expected',
-                  '${result.yieldForecast.totalExpectedTonnes.toStringAsFixed(2)} tonnes'),
-              _buildResultRow('Total Kg',
-                  '${result.yieldForecast.totalKg.toStringAsFixed(0)} kg'),
-              _buildResultRow('Farm Area',
-                  '${result.farmAreaAcres.toStringAsFixed(2)} acres (${result.farmAreaHectares.toStringAsFixed(2)} ha)'),
+              _buildResultRow(
+                'Per Hectare',
+                '${result.yieldForecast.perHectareTonnes.toStringAsFixed(2)} tonnes',
+              ),
+              _buildResultRow(
+                'Total Expected',
+                '${result.yieldForecast.totalExpectedTonnes.toStringAsFixed(2)} tonnes',
+              ),
+              _buildResultRow(
+                'Total Kg',
+                '${result.yieldForecast.totalKg.toStringAsFixed(0)} kg',
+              ),
+              _buildResultRow(
+                'Farm Area',
+                '${result.farmAreaAcres.toStringAsFixed(2)} acres (${result.farmAreaHectares.toStringAsFixed(2)} ha)',
+              ),
             ],
           ),
 
@@ -386,14 +408,22 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           _buildResultCard(
             title: '💰 Economic Estimate',
             children: [
-              _buildResultRow('Expected Income',
-                  '₹${result.economicEstimate.expectedIncomeLow.toStringAsFixed(0)} - ₹${result.economicEstimate.expectedIncomeHigh.toStringAsFixed(0)}'),
-              _buildResultRow('Estimated Costs',
-                  '₹${result.economicEstimate.estimatedCosts.toStringAsFixed(0)}'),
-              _buildResultRow('Net Profit',
-                  '₹${result.economicEstimate.netProfitLow.toStringAsFixed(0)} - ₹${result.economicEstimate.netProfitHigh.toStringAsFixed(0)}'),
-              _buildResultRow('ROI',
-                  '${result.economicEstimate.roiLow.toStringAsFixed(1)}% - ${result.economicEstimate.roiHigh.toStringAsFixed(1)}%'),
+              _buildResultRow(
+                'Expected Income',
+                '₹${result.economicEstimate.expectedIncomeLow.toStringAsFixed(0)} - ₹${result.economicEstimate.expectedIncomeHigh.toStringAsFixed(0)}',
+              ),
+              _buildResultRow(
+                'Estimated Costs',
+                '₹${result.economicEstimate.estimatedCosts.toStringAsFixed(0)}',
+              ),
+              _buildResultRow(
+                'Net Profit',
+                '₹${result.economicEstimate.netProfitLow.toStringAsFixed(0)} - ₹${result.economicEstimate.netProfitHigh.toStringAsFixed(0)}',
+              ),
+              _buildResultRow(
+                'ROI',
+                '${result.economicEstimate.roiLow.toStringAsFixed(1)}% - ${result.economicEstimate.roiHigh.toStringAsFixed(1)}%',
+              ),
             ],
           ),
 
@@ -404,10 +434,12 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               _buildResultRow('Rating', result.cropSuitability.rating),
               _buildResultRow('Score', '${result.cropSuitability.score}/100'),
               const SizedBox(height: 8),
-              ...result.cropSuitability.factors.map((factor) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(factor, style: const TextStyle(fontSize: 14)),
-                  )),
+              ...result.cropSuitability.factors.map(
+                (factor) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(factor, style: const TextStyle(fontSize: 14)),
+                ),
+              ),
             ],
           ),
 
@@ -426,13 +458,21 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
             title: '🌡️ Climate',
             children: [
               _buildResultRow(
-                  'Avg Temperature', '${result.climate['temperature_avg']}°C'),
+                'Avg Temperature',
+                '${result.climate['temperature_avg']}°C',
+              ),
               _buildResultRow(
-                  'Min Temperature', '${result.climate['temperature_min']}°C'),
+                'Min Temperature',
+                '${result.climate['temperature_min']}°C',
+              ),
               _buildResultRow(
-                  'Max Temperature', '${result.climate['temperature_max']}°C'),
-              _buildResultRow('Annual Rainfall',
-                  '${result.climate['annual_rainfall_mm'].toStringAsFixed(0)} mm'),
+                'Max Temperature',
+                '${result.climate['temperature_max']}°C',
+              ),
+              _buildResultRow(
+                'Annual Rainfall',
+                '${result.climate['annual_rainfall_mm'].toStringAsFixed(0)} mm',
+              ),
             ],
           ),
 
@@ -440,8 +480,10 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           _buildResultCard(
             title: '💧 Irrigation Suggestion',
             children: [
-              Text(result.irrigationSuggestion,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                result.irrigationSuggestion,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               Text(result.irrigationDetail),
             ],
@@ -452,10 +494,12 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
             _buildResultCard(
               title: '🌱 Fertilizer Recommendations',
               children: result.fertilizerRecommendation
-                  .map((rec) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text('• $rec'),
-                      ))
+                  .map(
+                    (rec) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text('• $rec'),
+                    ),
+                  )
                   .toList(),
             ),
 
@@ -465,11 +509,15 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               title: '⚠️ High Risk Alerts',
               color: Colors.red.shade50,
               children: result.highRiskAlerts
-                  .map((alert) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(alert,
-                            style: const TextStyle(color: Colors.red)),
-                      ))
+                  .map(
+                    (alert) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        alert,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
 
@@ -479,11 +527,15 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               title: '⚡ Medium Risk Alerts',
               color: Colors.orange.shade50,
               children: result.mediumRiskAlerts
-                  .map((alert) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(alert,
-                            style: const TextStyle(color: Colors.orange)),
-                      ))
+                  .map(
+                    (alert) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        alert,
+                        style: const TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
 
@@ -492,10 +544,12 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
             _buildResultCard(
               title: '📋 Additional Recommendations',
               children: result.additionalRecommendations
-                  .map((rec) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text('• $rec'),
-                      ))
+                  .map(
+                    (rec) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text('• $rec'),
+                    ),
+                  )
                   .toList(),
             ),
 
@@ -549,9 +603,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.grey),
@@ -585,9 +637,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.grey),
@@ -598,10 +648,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
         ),
       ),
       items: items.map((item) {
-        return DropdownMenuItem(
-          value: item,
-          child: Text(item),
-        );
+        return DropdownMenuItem(value: item, child: Text(item));
       }).toList(),
       onChanged: onChanged,
     );
@@ -615,9 +662,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     return Card(
       color: color,
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -625,10 +670,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(height: 16),
             ...children,
