@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import '../model/crop_model.dart';
 import '../model/weather_model.dart';
 import '../model/daily_action_model.dart';
+import '../../prior_data/controller/farm_data_controller.dart';
+import '../../prior_data/controller/climate_service.dart';
 
 class HomeController extends ChangeNotifier {
+  final FarmDataController _farmDataController = FarmDataController();
+  final ClimateService _climateService = ClimateService();
+
   // Selected crop
   Crop? _selectedCrop;
   Crop? get selectedCrop => _selectedCrop;
@@ -11,6 +16,11 @@ class HomeController extends ChangeNotifier {
   // Available crops
   List<Crop> _crops = [];
   List<Crop> get crops => _crops;
+
+  // User location from profile
+  double? _userLatitude;
+  double? _userLongitude;
+  String? _userState;
 
   // Current weather
   Weather? _currentWeather;
@@ -40,16 +50,86 @@ class HomeController extends ChangeNotifier {
   }
 
   void _initializeData() {
-    _loadCrops();
-    _loadWeather();
+    _loadUserFarmData();
   }
 
-  // Load crops data
-  void _loadCrops() {
+  // Load user's farm data from profile
+  Future<void> _loadUserFarmData() async {
     _isLoadingCrops = true;
     notifyListeners();
 
-    // Initialize with sample crops
+    try {
+      final farmData = await _farmDataController.getFarmData();
+
+      if (farmData != null) {
+        // Store user location
+        _userLatitude = farmData.farmBasics.location.latitude;
+        _userLongitude = farmData.farmBasics.location.longitude;
+        _userState = farmData.farmBasics.location.state;
+
+        // Load weather based on user's location
+        await _loadWeatherForLocation(
+          _userLatitude!,
+          _userLongitude!,
+          _userState,
+        );
+
+        // Load crops based on user's selected crops
+        _loadUserCrops(farmData.farmBasics.crops);
+      } else {
+        // No farm data - load defaults
+        _loadDefaultCrops();
+        _loadWeather();
+      }
+    } catch (e) {
+      print('Error loading farm data: $e');
+      _loadDefaultCrops();
+      _loadWeather();
+    }
+
+    _isLoadingCrops = false;
+    notifyListeners();
+  }
+
+  // Load crops based on user's profile
+  void _loadUserCrops(List<String> userCropNames) {
+    _crops.clear();
+
+    // Map user crop names to crop objects
+    for (final cropName in userCropNames) {
+      Crop? crop;
+      switch (cropName.toLowerCase()) {
+        case 'rice':
+          crop = _createRiceCrop();
+          break;
+        case 'wheat':
+          crop = _createWheatCrop();
+          break;
+        case 'maize':
+          crop = _createMaizeCrop();
+          break;
+        case 'cotton':
+          crop = _createCottonCrop();
+          break;
+      }
+      if (crop != null) {
+        _crops.add(crop);
+      }
+    }
+
+    // If no valid crops found, add default
+    if (_crops.isEmpty) {
+      _loadDefaultCrops();
+    }
+
+    // Select first crop by default
+    if (_crops.isNotEmpty) {
+      _selectedCrop = _crops[0];
+    }
+  }
+
+  // Load default crops (fallback)
+  void _loadDefaultCrops() {
     _crops = [
       _createRiceCrop(),
       _createWheatCrop(),
@@ -61,18 +141,55 @@ class HomeController extends ChangeNotifier {
     if (_crops.isNotEmpty) {
       _selectedCrop = _crops[0];
     }
+  }
 
-    _isLoadingCrops = false;
+  // Load weather data for user's location
+  Future<void> _loadWeatherForLocation(
+    double latitude,
+    double longitude,
+    String? state,
+  ) async {
+    _isLoadingWeather = true;
+    notifyListeners();
+
+    try {
+      // Get climate data from NASA POWER API
+      final climateData = await _climateService.getClimateDataWithFallback(
+        latitude: latitude,
+        longitude: longitude,
+        state: state,
+      );
+
+      // Use climate data for current weather estimate
+      _currentWeather = Weather(
+        temperature: climateData.tavgClimate,
+        humidity: 73.0, // TODO: Get from weather API
+        rainfallProbability: climateData.prcpAnnualClimate > 5 ? 90.0 : 30.0,
+        condition: climateData.prcpAnnualClimate > 5
+            ? 'Rainy'
+            : 'Partly Cloudy',
+        windSpeed: 12.5,
+        timestamp: DateTime.now(),
+        location: state ?? 'Your Location',
+      );
+
+      // Generate alerts based on weather
+      _generateWeatherAlerts();
+    } catch (e) {
+      print('Error loading weather for location: $e');
+      _loadWeather(); // Fallback
+    }
+
+    _isLoadingWeather = false;
     notifyListeners();
   }
 
-  // Load weather data
+  // Fallback weather loader
   Future<void> _loadWeather() async {
     _isLoadingWeather = true;
     notifyListeners();
 
-    // TODO: Replace with actual weather API call
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     _currentWeather = Weather(
       temperature: 28.0,
@@ -84,7 +201,6 @@ class HomeController extends ChangeNotifier {
       location: 'Current Location',
     );
 
-    // Generate alerts based on weather
     _generateWeatherAlerts();
 
     _isLoadingWeather = false;

@@ -2,38 +2,128 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import '../../controller/home_controller.dart';
-import '../../model/daily_action_model.dart';
+import '../../../services/ml_api_service.dart';
+import '../../../prior_data/controller/farm_data_controller.dart';
 
-class DailyActionScreen extends StatelessWidget {
+class DailyActionScreen extends StatefulWidget {
   final DateTime date;
 
   const DailyActionScreen({super.key, required this.date});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Provider.of<HomeController>(context);
-    final dailyAction = controller.getDailyActionForDate(date);
+  State<DailyActionScreen> createState() => _DailyActionScreenState();
+}
 
-    if (dailyAction == null) {
+class _DailyActionScreenState extends State<DailyActionScreen> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _planData;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlan();
+  }
+
+  Future<void> _loadPlan() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Check if API is available
+      final isHealthy = await MLApiService.checkHealth();
+      if (!isHealthy) {
+        setState(() {
+          _error =
+              'ML API Server not available. Please start the server:\n\ncd engine/api\npython app.py';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Get farm data
+      final farmDataController = FarmDataController();
+      final farmData = await farmDataController.getFarmData();
+
+      if (farmData == null) {
+        setState(() {
+          _error = 'Please complete your farm profile first';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Prepare API request data
+      final apiData = MLApiService.prepareFarmDataForAPI(
+        farmBasics: farmData.farmBasics.toJson(),
+        soilQuality: farmData.soilQuality.toJson(),
+        climateData: farmData.climateData.toJson(),
+        plantingDate: farmData.farmBasics.plantingDate,
+      );
+
+      // Get comprehensive plan
+      final plan = await MLApiService.getComprehensivePlan(
+        farmData: apiData,
+        targetDate: DateFormat('yyyy-MM-dd').format(widget.date),
+      );
+
+      if (plan == null || !plan['success']) {
+        setState(() {
+          _error = 'Failed to get recommendations from ML model';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _planData = plan;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFF2D5016),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF2C3E50)),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Daily Action Plan',
-            style: TextStyle(
-              color: Color(0xFF2C3E50),
+          title: Text(
+            DateFormat('EEEE, MMM d, y').format(widget.date),
+            style: const TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 18,
             ),
           ),
         ),
-        body: const Center(child: Text('No data available for this date')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading AI recommendations...'),
+            ],
+          ),
+        ),
       );
+    }
+
+    if (_error != null) {
+      return _buildErrorView();
     }
 
     return Scaffold(

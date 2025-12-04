@@ -6,7 +6,7 @@ import '../model/disease_result.dart';
 
 class DiseaseDetectionController extends ChangeNotifier {
   static const String _baseUrl =
-      'http://localhost:8000'; // Change for production
+      'http://10.0.2.2:5001'; // Android emulator special IP for localhost
 
   bool _isLoading = false;
   String? _error;
@@ -32,7 +32,9 @@ class DiseaseDetectionController extends ChangeNotifier {
   /// Get available models
   Future<Map<String, dynamic>?> getAvailableModels() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/models'));
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/disease-models'),
+      );
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
       }
@@ -55,7 +57,7 @@ class DiseaseDetectionController extends ChangeNotifier {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$_baseUrl/predict'),
+        Uri.parse('$_baseUrl/api/detect-disease'),
       );
 
       // Add image file
