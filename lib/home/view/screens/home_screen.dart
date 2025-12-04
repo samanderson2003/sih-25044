@@ -8,7 +8,9 @@ import '../../model/crop_model.dart';
 import '../widgets/weather_indicator.dart';
 import '../widgets/crop_tile.dart';
 import 'month_detail_screen.dart';
-import 'daily_action_screen.dart';
+import 'daily_actions_screen.dart';
+import '../../../services/ml_api_service.dart';
+import '../../../prior_data/controller/farm_data_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -796,6 +798,25 @@ class _HomeScreenState extends State<HomeScreen>
                   month == DateTime.now().month &&
                   _selectedYear == DateTime.now().year;
 
+              // Get crop suitability for this month
+              final suitability = controller.getSuitabilityForMonth(month);
+              Color monthColor;
+
+              if (isSelected) {
+                // Selected month uses crop theme color
+                monthColor =
+                    controller.selectedCrop?.themeColor ??
+                    const Color(0xFF64B5F6);
+              } else if (suitability != null) {
+                // Use suitability color (Peak/Moderate/Not Ideal)
+                monthColor = suitability.color.withOpacity(
+                  isCurrent ? 0.9 : 0.7,
+                );
+              } else {
+                // Fallback color
+                monthColor = const Color(0xFFFFF3E0);
+              }
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -806,15 +827,11 @@ class _HomeScreenState extends State<HomeScreen>
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? controller.selectedCrop?.themeColor ??
-                              const Color(0xFF64B5F6)
-                        : isCurrent
-                        ? (controller.selectedCrop?.themeColor ??
-                                  const Color(0xFF90CAF9))
-                              .withOpacity(0.3)
-                        : const Color(0xFFFFF3E0),
+                    color: monthColor,
                     borderRadius: BorderRadius.circular(24),
+                    border: isCurrent
+                        ? Border.all(color: Colors.black87, width: 2)
+                        : null,
                   ),
                   child: Center(
                     child: Text(
@@ -932,19 +949,47 @@ class _HomeScreenState extends State<HomeScreen>
                 fontWeight: FontWeight.w500,
               ),
             ),
-            onDaySelected: (selectedDay, focusedDay) {
+            onDaySelected: (selectedDay, focusedDay) async {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
               controller.selectDate(selectedDay);
 
+              // Get farm data for ML API
+              final farmDataController = FarmDataController();
+              final farmData = await farmDataController.getFarmData();
+
+              if (farmData == null) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please complete your farm profile first'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+
+              // Prepare data for ML API
+              final apiData = MLApiService.prepareFarmDataForAPI(
+                farmBasics: farmData.farmBasics.toJson(),
+                soilQuality: farmData.soilQuality.toJson(),
+                climateData: farmData.climateData?.toJson() ?? {},
+                plantingDate: DateTime.now()
+                    .subtract(const Duration(days: 30))
+                    .toIso8601String()
+                    .split('T')[0],
+              );
+
+              // Navigate to ML-powered daily actions
+              if (!mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChangeNotifierProvider.value(
-                    value: _homeController,
-                    child: DailyActionScreen(date: selectedDay),
+                  builder: (context) => DailyActionsScreen(
+                    selectedDate: selectedDay,
+                    farmData: apiData,
                   ),
                 ),
               );
@@ -959,10 +1004,21 @@ class _HomeScreenState extends State<HomeScreen>
             },
             calendarBuilders: CalendarBuilders(
               defaultBuilder: (context, day, focusedDay) {
+                // Get suitability for the current month
+                final suitability = controller.getSuitabilityForMonth(
+                  day.month,
+                );
+                Color backgroundColor = Colors.white.withOpacity(0.5);
+
+                if (suitability != null) {
+                  // Use season color with lower opacity for better readability
+                  backgroundColor = suitability.color.withOpacity(0.3);
+                }
+
                 return Container(
                   margin: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
+                    color: backgroundColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
