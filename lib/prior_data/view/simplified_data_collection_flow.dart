@@ -91,27 +91,60 @@ class _SimplifiedDataCollectionFlowState
         updatedAt: DateTime.now(),
       );
 
-      // Save to Firebase
-      await _controller.saveFarmData(farmData);
+      print('💾 Attempting to save farm data to Firebase...');
+
+      // Save to Firebase with timeout
+      final result = await _controller
+          .saveFarmData(farmData)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              print('⏱️ Firebase save timeout after 30 seconds');
+              return {
+                'success': false,
+                'message':
+                    'Connection timeout. Please check your internet connection.',
+              };
+            },
+          );
+
+      print('📊 Save result: ${result['success']} - ${result['message']}');
 
       if (!mounted) return;
 
-      // Show success and navigate back
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.initialFarmData != null
-                ? '✅ Farm data updated successfully!'
-                : '✅ Farm data saved successfully!',
+      // Check if save was successful
+      if (result['success'] == true) {
+        // Show success and navigate back
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.initialFarmData != null
+                  ? '✅ Farm data updated successfully!'
+                  : '✅ Farm data saved successfully!',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        );
 
-      // Navigate back to profile or home
-      Navigator.of(context).popUntil((route) => route.isFirst);
+        // Navigate back to profile or home
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        // Show error
+        setState(() {
+          _isSaving = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ ${result['message'] ?? 'Failed to save data'}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
+      print('🔥 Exception during save: $e');
       setState(() {
         _isSaving = false;
       });
@@ -122,6 +155,7 @@ class _SimplifiedDataCollectionFlowState
         SnackBar(
           content: Text('❌ Error saving data: $e'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
