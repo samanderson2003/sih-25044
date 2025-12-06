@@ -130,12 +130,14 @@ class LocationModel {
   final double longitude;
   final String? state;
   final String? district;
+  final String? plusCode; // Open Location Code for 4m x 4m precision
 
   LocationModel({
     required this.latitude,
     required this.longitude,
     this.state,
     this.district,
+    this.plusCode,
   });
 
   Map<String, dynamic> toJson() {
@@ -144,6 +146,7 @@ class LocationModel {
       'longitude': longitude,
       'state': state,
       'district': district,
+      'plusCode': plusCode,
     };
   }
 
@@ -153,6 +156,7 @@ class LocationModel {
       longitude: (json['longitude'] ?? 0).toDouble(),
       state: json['state'],
       district: json['district'],
+      plusCode: json['plusCode'],
     );
   }
 }
