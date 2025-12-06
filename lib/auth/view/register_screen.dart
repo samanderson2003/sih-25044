@@ -1,8 +1,11 @@
+// register_screen.dart (UPDATED)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../controller/register_controller.dart';
 import '../model/register_model.dart';
 import '../../terms&permissions/view/terms&conditions_view.dart';
 import '../../widgets/translated_text.dart';
+import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,16 +17,14 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _mobileController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final RegisterController _registerController = RegisterController();
 
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   String? _errorMessage;
+  String? _verificationId;
+  bool _isOtpSent = false;
+  bool _isPhoneVerified = false;
 
   // Theme colors for farming app
   static const primaryColor = Color(0xFF2D5016); // Deep green
@@ -33,30 +34,113 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _mobileController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleEmailRegister() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _handleSendOtp() async {
+    // Local validation check using model to get immediate feedback
+    final name = _nameController.text.trim();
+    final mobileNumber = _mobileController.text.trim();
+    
+    final model = RegisterModel(
+      email: '', password: '', confirmPassword: '', 
+      name: name, mobileNumber: mobileNumber,
+    );
+
+    // Consolidated validation check
+    String? validationError = model.validateName() ?? model.validateMobileNumber();
+    
+    if (validationError != null) {
+      setState(() => _errorMessage = validationError);
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
+    // Call controller with name and mobile number for validation and pre-check
+    final result =
+        await _registerController.sendOtp(name, mobileNumber);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
+      _verificationId = result['verificationId'];
+      _isOtpSent = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.blue,
+        ),
+      );
+      // Navigate to OTP verification screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtpVerificationScreen(
+            verificationId: _verificationId!,
+            phoneNumber: mobileNumber,
+            onVerificationSuccess: _handleVerificationSuccess,
+          ),
+        ),
+      );
+    } else {
+      setState(() {
+        _errorMessage = result['message'];
+      });
+    }
+  }
+
+  void _handleVerificationSuccess() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isPhoneVerified = true;
+      _isOtpSent = false; // Hide the button after success
+    });
+
+    // 1. Finalize registration (create user document in Firestore)
+    await _handleFinalizeRegister();
+  }
+
+  Future<void> _handleFinalizeRegister() async {
+    // Final check for name and phone number
+    final name = _nameController.text.trim();
+    final mobileNumber = _mobileController.text.trim();
+
     final model = RegisterModel(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      mobileNumber: _mobileController.text.trim(),
-      password: _passwordController.text.trim(),
-      confirmPassword: _confirmPasswordController.text.trim(),
+      email: '', password: '', confirmPassword: '', 
+      name: name, mobileNumber: mobileNumber,
     );
 
-    final result = await _registerController.registerWithEmail(model);
+    String? validationError = model.validateName() ?? model.validateMobileNumber();
+
+    if (validationError != null) {
+      setState(() => _errorMessage = validationError);
+      return;
+    }
+
+    if (!_isPhoneVerified) {
+      // If user clicks button without verifying, initiate OTP flow
+      await _handleSendOtp();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    // Finalize Registration (Creates Firestore user profile)
+    final result =
+        await _registerController.finalizeRegistration(model);
 
     if (!mounted) return;
 
@@ -83,36 +167,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _handleGoogleSignUp() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final result = await _registerController.registerWithGoogle();
-
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (result['success']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
-        ),
-      );
-      // Navigate to main screen
-      Navigator.pushReplacementNamed(context, '/main');
-    } else {
-      if (result['message'] != 'Sign up cancelled') {
-        setState(() {
-          _errorMessage = result['message'];
-        });
-      }
-    }
+  // --- UI HELPER: The input decoration remains the same ---
+  InputDecoration _buildInputDecoration(
+    String label,
+    IconData prefixIcon, {
+    Widget? suffixIcon,
+  }) {
+    // ... (InputDecoration implementation remains the same)
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(prefixIcon, color: primaryColor),
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+    );
   }
 
   @override
@@ -155,7 +243,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   // Subtitle
                   const Text(
-                    'Join us to predict and optimize your crop yield',
+                    'Join us with your mobile number',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -198,132 +286,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Icons.person_outlined,
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _buildInputDecoration(
-                      'Email',
-                      Icons.email_outlined,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      final emailRegex = RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      final model = RegisterModel(
+                        email: '', password: '', confirmPassword: '', 
+                        name: value, mobileNumber: _mobileController.text.trim(),
                       );
-                      if (!emailRegex.hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
+                      return model.validateName();
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Mobile Number Field
+                  // Mobile Number Field with OTP Button
                   TextFormField(
                     controller: _mobileController,
                     keyboardType: TextInputType.phone,
+                    readOnly: _isPhoneVerified,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     decoration: _buildInputDecoration(
-                      'Mobile Number (Optional)',
+                      'Mobile Number',
                       Icons.phone_outlined,
+                      suffixIcon: _isPhoneVerified
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : TextButton(
+                              onPressed: _isLoading ? null : _handleSendOtp,
+                              child: Text(
+                                _isOtpSent ? 'Resend OTP' : 'Send OTP',
+                                style: const TextStyle(
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                     ),
                     validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                        final cleanNumber = value.replaceAll(
-                          RegExp(r'[^0-9]'),
-                          '',
-                        );
-                        if (cleanNumber.length != 10) {
-                          return 'Mobile number must be 10 digits';
-                        }
-                        if (!RegExp(r'^[6-9]').hasMatch(cleanNumber)) {
-                          return 'Invalid mobile number';
-                        }
-                      }
-                      return null;
+                       final model = RegisterModel(
+                        email: '', password: '', confirmPassword: '', 
+                        name: _nameController.text.trim(), mobileNumber: value,
+                      );
+                      return model.validateMobileNumber();
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 32),
 
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: _buildInputDecoration(
-                      'Password',
-                      Icons.lock_outlined,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: primaryColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    decoration: _buildInputDecoration(
-                      'Confirm Password',
-                      Icons.lock_outlined,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: primaryColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Register Button
+                  // Sign Up Button (Finalize Registration)
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleEmailRegister,
+                    onPressed: _isLoading ? null : _handleFinalizeRegister,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
@@ -344,80 +353,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                           )
-                        : const Text(
-                            'Sign Up',
-                            style: TextStyle(
+                        : Text(
+                            _isPhoneVerified ? 'Create Account' : 'Verify Phone & Sign Up',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                   ),
-                  const SizedBox(height: 24),
 
-                  // Divider with "OR"
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade400)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade400)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Google Sign Up Button
-                  OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _handleGoogleSignUp,
-                    icon: Image.asset(
-                      'assets/google_logo.png',
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback to a simple Google "G" icon
-                        return Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'G',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    label: const Text(
-                      'Continue with Google',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 32),
 
                   // Login Link
@@ -448,40 +392,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration(
-    String label,
-    IconData prefixIcon, {
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(prefixIcon, color: primaryColor),
-      suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.white,
     );
   }
 }

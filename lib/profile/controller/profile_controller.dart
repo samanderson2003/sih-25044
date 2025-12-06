@@ -1,3 +1,4 @@
+// profile_controller.dart (UPDATED)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../model/profile_model.dart';
@@ -112,8 +113,10 @@ class ProfileController {
     if (value == null || value.isEmpty) {
       return 'Please enter your mobile number';
     }
-    if (value.length < 10) {
-      return 'Please enter a valid mobile number';
+    // Aggressive cleaning and length check
+    final cleanNumber = value.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanNumber.length != 10) {
+      return 'Mobile number must be 10 digits';
     }
     return null;
   }
@@ -123,8 +126,9 @@ class ProfileController {
     if (value == null || value.isEmpty) {
       return 'Please enter your name';
     }
-    if (value.length < 2) {
-      return 'Name must be at least 2 characters';
+    // Added validation based on previous request: Only Uppercase, lowercase, and space
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+      return 'Name can only contain letters and spaces';
     }
     return null;
   }

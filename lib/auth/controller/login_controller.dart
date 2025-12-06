@@ -1,32 +1,107 @@
+// login_controller.dart (UPDATED)
+import 'dart:async'; 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/login_model.dart';
 
 class LoginController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Email/Password Login
-  Future<Map<String, dynamic>> loginWithEmail(LoginModel model) async {
+  // --- Utility to check if phone is already registered ---
+  Future<bool> isPhoneNumberRegistered(String mobileNumber) async {
     try {
-      // Validate model
-      if (!model.isValid()) {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('mobileNumber', isEqualTo: mobileNumber)
+          .limit(1)
+          .get();
+      
+      return querySnapshot.docs.isNotEmpty;
+
+    } catch (e) {
+      print('Error checking phone registration: $e');
+      return false; 
+    }
+  }
+
+  // --- 1. Send OTP (Modified for Phone Check) ---
+  Future<Map<String, dynamic>> sendOtp(String rawMobileNumber) async {
+    // --- FIX: Ensure mobile number is trimmed and cleaned here ---
+    final mobileNumber = rawMobileNumber.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    
+    // 1. Validation Check (using trimmed/cleaned number)
+    final model = LoginModel(mobile: mobileNumber);
+    if (model.validateMobile() != null) {
+      // Return the error from the model if validation fails
+      return {'success': false, 'message': model.validateMobile()!};
+    }
+    
+    // 2. Login Check: Only send OTP if the user IS registered
+    if (!await isPhoneNumberRegistered(mobileNumber)) {
         return {
           'success': false,
-          'message': model.validateEmail() ?? model.validatePassword(),
+          'message': 'No account found with this mobile number. Please sign up.',
         };
+    }
+    
+    // 3. Proceed with OTP
+    String phoneNumber = '+91$mobileNumber';
+    String? verificationId;
+    final completer = Completer<void>();
+
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {},
+      verificationFailed: (FirebaseAuthException e) {
+        if (!completer.isCompleted) {
+          completer.completeError(e);
+        }
+      },
+      codeSent: (String vid, int? token) {
+        verificationId = vid;
+        if (!completer.isCompleted) completer.complete();
+      },
+      codeAutoRetrievalTimeout: (String vid) {
+        verificationId = vid;
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+
+    try {
+      await completer.future.timeout(const Duration(seconds: 65));
+      if (verificationId != null) {
+        return {
+          'success': true,
+          'message': 'OTP sent successfully!',
+          'verificationId': verificationId,
+        };
+      } else {
+        return {'success': false, 'message': 'Failed to get verification ID.'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'OTP sending timed out.'};
+    } on FirebaseAuthException catch (e) {
+      return {'success': false, 'message': _getErrorMessage(e.code)};
+    } catch (e) {
+      return {'success': false, 'message': 'An unexpected error occurred during OTP send.'};
+    }
+  }
 
-      // Sign in with Firebase Auth
-      final UserCredential userCredential = await _auth
-          .signInWithEmailAndPassword(
-            email: model.email.trim(),
-            password: model.password.trim(),
-          );
+  // --- 2. Verify OTP and Log In (Unchanged) ---
+  Future<Map<String, dynamic>> verifyOtp({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    try {
+      final PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
 
-      // Ensure user document exists
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
       if (userCredential.user != null) {
         await _ensureUserDocument(userCredential.user!);
       }
@@ -39,66 +114,18 @@ class LoginController {
     } on FirebaseAuthException catch (e) {
       return {'success': false, 'message': _getErrorMessage(e.code)};
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred. Please try again.',
-      };
+      return {'success': false, 'message': 'OTP verification failed. Please check the code.'};
     }
   }
 
-  // Google Sign In
-  Future<Map<String, dynamic>> loginWithGoogle() async {
-    try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      // User cancelled the sign-in
-      if (googleUser == null) {
-        return {'success': false, 'message': 'Sign in cancelled'};
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
-
-      // Ensure user document exists
-      if (userCredential.user != null) {
-        await _ensureUserDocument(userCredential.user!);
-      }
-
-      return {
-        'success': true,
-        'message': 'Google Sign-In successful!',
-        'user': userCredential.user,
-      };
-    } on FirebaseAuthException catch (e) {
-      return {'success': false, 'message': _getErrorMessage(e.code)};
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred during Google sign-in.',
-      };
-    }
-  }
-
-  // Ensure user document exists in Firestore
+  // Ensure user document exists in Firestore (for Login)
   Future<void> _ensureUserDocument(User user) async {
     try {
       final userDocRef = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await userDocRef.get();
 
       if (!docSnapshot.exists) {
+        // Create minimal profile for users authenticated via Phone Auth
         await userDocRef.set({
           'uid': user.uid,
           'email': user.email,
@@ -106,9 +133,9 @@ class LoginController {
           'photoURL': user.photoURL,
           'createdAt': FieldValue.serverTimestamp(),
           'lastLogin': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
       } else {
-        // Update last login
+        // Update last login for existing user
         await userDocRef.update({'lastLogin': FieldValue.serverTimestamp()});
       }
     } catch (e) {
@@ -119,35 +146,16 @@ class LoginController {
   // Error message helper
   String _getErrorMessage(String code) {
     switch (code) {
-      case 'user-not-found':
-        return 'No user found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'invalid-email':
-        return 'The email address is not valid.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
+      case 'invalid-verification-code':
+        return 'Invalid OTP code';
+      case 'session-expired':
+        return 'OTP session expired. Please request a new OTP';
+      case 'invalid-phone-number':
+        return 'The phone number format is invalid.';
       case 'too-many-requests':
-        return 'Too many failed attempts. Please try again later.';
-      case 'invalid-credential':
-        return 'Invalid credentials. Please check your email and password.';
+        return 'Too many login attempts. Please try again later.';
       default:
-        return 'An error occurred. Please try again.';
+        return 'An error occurred. Please try again. Code: $code';
     }
-  }
-
-  // Sign out
-  Future<void> signOut() async {
-    await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
-  }
-
-  // Get current user
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
-
-  // Check if user is logged in
-  bool isLoggedIn() {
-    return _auth.currentUser != null;
   }
 }

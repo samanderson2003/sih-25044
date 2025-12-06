@@ -1,7 +1,9 @@
+// register_model.dart
 class RegisterModel {
-  final String email;
-  final String password;
-  final String confirmPassword;
+  // Kept for controller compatibility
+  final String email; 
+  final String password; 
+  final String confirmPassword; 
   final String? name;
   final String? mobileNumber;
 
@@ -14,69 +16,33 @@ class RegisterModel {
   });
 
   // Validation methods
-  String? validateEmail() {
-    if (email.isEmpty) {
-      return 'Email is required';
-    }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  String? validatePassword() {
-    if (password.isEmpty) {
-      return 'Password is required';
-    }
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  String? validateConfirmPassword() {
-    if (confirmPassword.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (password != confirmPassword) {
-      return 'Passwords do not match';
-    }
-    return null;
-  }
-
   String? validateName() {
-    if (name != null && name!.isEmpty) {
+    if (name == null || name!.isEmpty) {
       return 'Name is required';
+    }
+    // New validation: Only Uppercase, lowercase, and space are allowed
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(name!)) {
+      return 'Name can only contain letters and spaces';
     }
     return null;
   }
 
   String? validateMobileNumber() {
-    if (mobileNumber != null && mobileNumber!.isNotEmpty) {
-      // Remove any spaces or special characters
-      final cleanNumber = mobileNumber!.replaceAll(RegExp(r'[^0-9]'), '');
-      // Check if it's a valid 10-digit Indian mobile number
-      if (cleanNumber.length != 10) {
-        return 'Mobile number must be 10 digits';
-      }
-      // Check if it starts with valid digits (6-9 for Indian numbers)
-      if (!RegExp(r'^[6-9]').hasMatch(cleanNumber)) {
-        return 'Invalid mobile number';
-      }
+    if (mobileNumber == null || mobileNumber!.isEmpty) {
+      return 'Mobile number is required';
+    }
+    final cleanNumber = mobileNumber!.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanNumber.length != 10) {
+      return 'Mobile number must be 10 digits';
     }
     return null;
   }
 
   bool isValid() {
-    return validateEmail() == null &&
-        validatePassword() == null &&
-        validateConfirmPassword() == null &&
-        validateName() == null &&
-        validateMobileNumber() == null;
+    return validateName() == null && validateMobileNumber() == null;
   }
 
   Map<String, dynamic> toJson() {
-    return {'email': email, 'name': name, 'password': password};
+    return {'email': email, 'name': name, 'mobileNumber': mobileNumber};
   }
 }

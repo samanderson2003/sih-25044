@@ -1,36 +1,32 @@
+// login_model.dart (UPDATED)
 class LoginModel {
-  final String email;
-  final String password;
+  final String mobile;
 
-  LoginModel({required this.email, required this.password});
+  LoginModel({required this.mobile});
 
   // Validation methods
-  String? validateEmail() {
-    if (email.isEmpty) {
-      return 'Email is required';
+  String? validateMobile() {
+    // Trim the input string first
+    final trimmedMobile = mobile.trim(); 
+    
+    if (trimmedMobile.isEmpty) {
+      return 'Mobile number is required';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  String? validatePassword() {
-    if (password.isEmpty) {
-      return 'Password is required';
-    }
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+    
+    // Replace non-numeric characters and then check length
+    final cleanNumber = trimmedMobile.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    if (cleanNumber.length != 10) {
+      return 'Mobile number must be 10 digits';
     }
     return null;
   }
 
   bool isValid() {
-    return validateEmail() == null && validatePassword() == null;
+    return validateMobile() == null;
   }
 
   Map<String, dynamic> toJson() {
-    return {'email': email, 'password': password};
+    return {'mobile': mobile};
   }
 }

@@ -1,3 +1,4 @@
+// profile_view.dart (UPDATED)
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -93,7 +94,7 @@ class _ProfileViewState extends State<ProfileView> {
                 final userData =
                     userSnapshot.data!.data() as Map<String, dynamic>;
                 final displayName = userData['displayName'] ?? '';
-                final email = userData['email'] ?? user.email ?? '';
+                // REMOVED: final email = userData['email'] ?? user.email ?? '';
                 final mobileNumber = userData['mobileNumber']?.toString() ?? '';
 
                 // Set controllers if not editing
@@ -156,12 +157,13 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                             const SizedBox(height: 15),
 
-                            _buildInfoCard(
-                              icon: Icons.email,
-                              label: 'Email',
-                              value: email,
-                            ),
-                            const SizedBox(height: 15),
+                            // REMOVED EMAIL FIELD:
+                            // _buildInfoCard(
+                            //   icon: Icons.email,
+                            //   label: 'Email',
+                            //   value: email,
+                            // ),
+                            // const SizedBox(height: 15),
 
                             _buildEditableField(
                               label: 'Mobile Number',

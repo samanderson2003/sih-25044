@@ -1,7 +1,8 @@
+// profile_model.dart (UPDATED)
 class ProfileModel {
   final String uid;
   final String displayName;
-  final String email;
+  // REMOVED: final String email;
   final String mobileNumber;
   final bool emailVerified;
   final String? photoURL;
@@ -11,7 +12,7 @@ class ProfileModel {
   ProfileModel({
     required this.uid,
     required this.displayName,
-    required this.email,
+    // REMOVED: required this.email,
     required this.mobileNumber,
     this.emailVerified = false,
     this.photoURL,
@@ -24,7 +25,7 @@ class ProfileModel {
     return ProfileModel(
       uid: json['uid'] ?? '',
       displayName: json['displayName'] ?? '',
-      email: json['email'] ?? '',
+      // REMOVED: email: json['email'] ?? '',
       mobileNumber: json['mobileNumber']?.toString() ?? '',
       emailVerified: json['emailVerified'] ?? false,
       photoURL: json['photoURL'],
@@ -38,7 +39,7 @@ class ProfileModel {
     return {
       'uid': uid,
       'displayName': displayName,
-      'email': email,
+      // REMOVED: 'email': email,
       'mobileNumber': mobileNumber,
       'emailVerified': emailVerified,
       'photoURL': photoURL,
@@ -51,7 +52,7 @@ class ProfileModel {
   ProfileModel copyWith({
     String? uid,
     String? displayName,
-    String? email,
+    // REMOVED: String? email,
     String? mobileNumber,
     bool? emailVerified,
     String? photoURL,
@@ -61,7 +62,7 @@ class ProfileModel {
     return ProfileModel(
       uid: uid ?? this.uid,
       displayName: displayName ?? this.displayName,
-      email: email ?? this.email,
+      // REMOVED: email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       emailVerified: emailVerified ?? this.emailVerified,
       photoURL: photoURL ?? this.photoURL,

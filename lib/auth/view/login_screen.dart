@@ -1,4 +1,6 @@
+// login_screen.dart (UPDATED)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../controller/login_controller.dart';
 import '../model/login_model.dart';
 import '../../terms&permissions/view/terms&conditions_view.dart';
@@ -7,6 +9,7 @@ import '../../terms&permissions/controller/terms&conditions_controller.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
 import '../../prior_data/view/simplified_data_collection_flow.dart';
 import '../../widgets/translated_text.dart';
+import 'otp_verification_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,13 +20,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _mobileController = TextEditingController();
   final LoginController _loginController = LoginController();
 
   bool _isLoading = false;
-  bool _obscurePassword = true;
   String? _errorMessage;
+  String? _verificationId;
 
   // Theme colors for farming app
   static const primaryColor = Color(0xFF2D5016); // Deep green
@@ -33,25 +35,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _mobileController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleEmailLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _handleSendOtp() async {
+    // --- FIX: Ensure mobile number is trimmed here ---
+    final mobileNumber = _mobileController.text.trim();
+    
+    // --- Manual Validation Check (uses the model's logic for UI feedback) ---
+    final model = LoginModel(mobile: mobileNumber);
+    String? validationError = model.validateMobile();
+
+    if (validationError != null) {
+      setState(() => _errorMessage = validationError);
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    final model = LoginModel(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-
-    final result = await _loginController.loginWithEmail(model);
+    final result =
+        await _loginController.sendOtp(mobileNumber); // Pass trimmed number
 
     if (!mounted) return;
 
@@ -60,61 +67,24 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (result['success']) {
+      _verificationId = result['verificationId'];
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message']),
-          backgroundColor: Colors.green,
+          backgroundColor: Colors.blue,
         ),
       );
-
-      // Check if user has accepted terms and granted permissions
-      final termsController = TermsConditionsController();
-      final permissionsController = PermissionsController();
-
-      final hasAcceptedTerms = await termsController.hasAcceptedTerms();
-
-      if (!mounted) return;
-
-      if (!hasAcceptedTerms) {
-        // User hasn't accepted terms - go to terms screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const TermsConditionsScreen(),
+      // Navigate to OTP verification screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtpVerificationScreen(
+            verificationId: _verificationId!,
+            phoneNumber: mobileNumber,
+            onVerificationSuccess: _handleVerificationSuccess,
           ),
-        );
-      } else {
-        // Terms accepted, now check permissions
-        final permissionStatus = await permissionsController
-            .checkPermissionStatus();
-        final hasLocation = permissionStatus['location'] ?? false;
-
-        if (!hasLocation) {
-          // Location not granted - go to permissions screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PermissionsScreen()),
-          );
-        } else {
-          // Permissions granted - check if farm data is complete
-          final farmDataController = FarmDataController();
-          final isFarmDataComplete = await farmDataController
-              .isFarmDataComplete();
-
-          if (!isFarmDataComplete) {
-            // Farm data not complete - go to data collection
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SimplifiedDataCollectionFlow(),
-              ),
-            );
-          } else {
-            // All good - go to main screen
-            Navigator.pushReplacementNamed(context, '/main');
-          }
-        }
-      }
+        ),
+      );
     } else {
       setState(() {
         _errorMessage = result['message'];
@@ -122,83 +92,93 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _handleVerificationSuccess() async {
+    if (!mounted) return;
 
-    final result = await _loginController.loginWithGoogle();
+    // Check if user has accepted terms and granted permissions
+    final termsController = TermsConditionsController();
+    final permissionsController = PermissionsController();
+
+    // Check if user has accepted terms
+    final hasAcceptedTerms = await termsController.hasAcceptedTerms();
 
     if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (result['success']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
+    if (!hasAcceptedTerms) {
+      // User hasn't accepted terms - go to terms screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TermsConditionsScreen(),
         ),
       );
+    } else {
+      // Terms accepted, now check permissions
+      final permissionStatus = await permissionsController
+          .checkPermissionStatus();
+      final hasLocation = permissionStatus['location'] ?? false;
 
-      // Check if user has accepted terms and granted permissions
-      final termsController = TermsConditionsController();
-      final permissionsController = PermissionsController();
-
-      final hasAcceptedTerms = await termsController.hasAcceptedTerms();
-
-      if (!mounted) return;
-
-      if (!hasAcceptedTerms) {
-        // User hasn't accepted terms - go to terms screen
+      if (!hasLocation) {
+        // Location not granted - go to permissions screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const TermsConditionsScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const PermissionsScreen()),
         );
       } else {
-        // Terms accepted, now check permissions
-        final permissionStatus = await permissionsController
-            .checkPermissionStatus();
-        final hasLocation = permissionStatus['location'] ?? false;
+        // Permissions granted - check if farm data is complete
+        final farmDataController = FarmDataController();
+        final isFarmDataComplete = await farmDataController
+            .isFarmDataComplete();
 
-        if (!hasLocation) {
-          // Location not granted - go to permissions screen
+        if (!isFarmDataComplete) {
+          // Farm data not complete - go to data collection
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const PermissionsScreen()),
+            MaterialPageRoute(
+              builder: (context) => const SimplifiedDataCollectionFlow(),
+            ),
           );
         } else {
-          // Permissions granted - check if farm data is complete
-          final farmDataController = FarmDataController();
-          final isFarmDataComplete = await farmDataController
-              .isFarmDataComplete();
-
-          if (!isFarmDataComplete) {
-            // Farm data not complete - go to data collection
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SimplifiedDataCollectionFlow(),
-              ),
-            );
-          } else {
-            // All good - go to main screen
-            Navigator.pushReplacementNamed(context, '/main');
-          }
+          // All good - go to main screen
+          Navigator.pushReplacementNamed(context, '/main');
         }
       }
-    } else {
-      if (result['message'] != 'Sign in cancelled') {
-        setState(() {
-          _errorMessage = result['message'];
-        });
-      }
     }
+  }
+
+  // --- UI HELPER: The input decoration remains the same ---
+  InputDecoration _buildInputDecoration(
+    String label,
+    IconData prefixIcon, {
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(prefixIcon, color: primaryColor),
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+    );
   }
 
   @override
@@ -247,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Subtitle
                   const Text(
-                    'Predict your harvest, grow your future',
+                    'Login with your mobile number to continue',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -281,65 +261,38 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                  // Email Field
+                  // Mobile Number Field with OTP Button
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     decoration: _buildInputDecoration(
-                      'Email',
-                      Icons.email_outlined,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      final emailRegex = RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      );
-                      if (!emailRegex.hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: _buildInputDecoration(
-                      'Password',
-                      Icons.lock_outlined,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: primaryColor,
+                      'Mobile Number',
+                      Icons.phone_outlined,
+                      suffixIcon: TextButton(
+                        onPressed: _isLoading ? null : _handleSendOtp,
+                        child: Text(
+                          _verificationId != null ? 'Resend OTP' : 'Send OTP',
+                          style: const TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
+                      final model = LoginModel(mobile: value ?? '');
+                      return model.validateMobile();
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // Login Button
+                  // Login Button (Trigger OTP Send)
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleEmailLogin,
+                    onPressed: _isLoading ? null : _handleSendOtp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
@@ -361,79 +314,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            'Login',
+                            'Login / Send OTP',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                   ),
-                  const SizedBox(height: 24),
 
-                  // Divider with "OR"
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade400)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade400)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Google Sign In Button
-                  OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    icon: Image.asset(
-                      'assets/google_logo.png',
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback to a simple Google "G" icon
-                        return Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'G',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    label: const Text(
-                      'Continue with Google',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
+                  // REMOVED Divider and Google Sign In
                   const SizedBox(height: 32),
 
                   // Sign Up Link
@@ -464,40 +353,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration(
-    String label,
-    IconData prefixIcon, {
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(prefixIcon, color: primaryColor),
-      suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.white,
     );
   }
 }
