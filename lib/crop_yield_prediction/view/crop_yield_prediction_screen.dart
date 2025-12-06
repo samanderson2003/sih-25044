@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../model/crop_yield_model.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
 import '../../services/ml_api_service.dart';
+import '../../widgets/translated_text.dart';
+import '../../providers/language_provider.dart';
+import '../../services/translation_service.dart';
 
 class CropYieldPredictionScreen extends StatefulWidget {
   const CropYieldPredictionScreen({super.key});
@@ -412,7 +416,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               ),
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
+                  : const TranslatedText(
                       'Predict Yield',
                       style: TextStyle(
                         fontSize: 16,
@@ -582,6 +586,9 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                   .toList(),
             ),
 
+          // 10% Profit Recommendation Section
+          _buildProfitRecommendationCard(result),
+
           // High Risk Alerts
           if (result.highRiskAlerts.isNotEmpty)
             _buildResultCard(
@@ -658,7 +665,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
+      child: TranslatedText(
         title,
         style: const TextStyle(
           fontSize: 18,
@@ -675,31 +682,56 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     required String hint,
     required IconData icon,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2D5016), width: 2),
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter $label';
-        }
-        if (double.tryParse(value) == null) {
-          return 'Please enter a valid number';
-        }
-        return null;
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return FutureBuilder<String>(
+          future: languageProvider.isOdia
+              ? TranslationService.translate(label, targetLanguage: 'or')
+              : Future.value(label),
+          builder: (context, labelSnapshot) {
+            return FutureBuilder<String>(
+              future: languageProvider.isOdia
+                  ? TranslationService.translate(hint, targetLanguage: 'or')
+                  : Future.value(hint),
+              builder: (context, hintSnapshot) {
+                return TextFormField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: labelSnapshot.data ?? label,
+                    hintText: hintSnapshot.data ?? hint,
+                    prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.grey),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF2D5016),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter ${labelSnapshot.data ?? label}';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                );
+              },
+            );
+          },
+        );
       },
     );
   }
@@ -711,25 +743,54 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     required ValueChanged<String?> onChanged,
     required IconData icon,
   }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2D5016), width: 2),
-        ),
-      ),
-      items: items.map((item) {
-        return DropdownMenuItem(value: item, child: Text(item));
-      }).toList(),
-      onChanged: onChanged,
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return FutureBuilder<String>(
+          future: languageProvider.isOdia
+              ? TranslationService.translate(label, targetLanguage: 'or')
+              : Future.value(label),
+          builder: (context, snapshot) {
+            return DropdownButtonFormField<String>(
+              value: value,
+              decoration: InputDecoration(
+                labelText: snapshot.data ?? label,
+                prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF2D5016),
+                    width: 2,
+                  ),
+                ),
+              ),
+              items: items.map((item) {
+                return DropdownMenuItem(
+                  value: item,
+                  child: languageProvider.isOdia
+                      ? FutureBuilder<String>(
+                          future: TranslationService.translate(
+                            item,
+                            targetLanguage: 'or',
+                          ),
+                          builder: (context, itemSnapshot) {
+                            return Text(itemSnapshot.data ?? item);
+                          },
+                        )
+                      : Text(item),
+                );
+              }).toList(),
+              onChanged: onChanged,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -776,5 +837,348 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildProfitRecommendationCard(CropPredictionResponse result) {
+    // Calculate 10% profit increase target
+    final currentProfit =
+        (result.economicEstimate.netProfitLow +
+            result.economicEstimate.netProfitHigh) /
+        2;
+    final targetProfit = currentProfit * 1.10;
+    final profitIncrease = targetProfit - currentProfit;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B5E20).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.trending_up_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '10% Profit Boost Plan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Target: +₹${profitIncrease.toStringAsFixed(0)} extra profit',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    '+10%',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B5E20),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Table Content
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Table Header
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Category',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'Recommendation',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Impact',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Pest Control Row
+                _buildRecommendationTableRow(
+                  icon: Icons.bug_report_rounded,
+                  category: 'Pest Control',
+                  recommendation: _getPestRecommendation(result.crop),
+                  impact: '+3%',
+                  impactColor: Colors.greenAccent,
+                ),
+
+                // Fertilizer Row
+                _buildRecommendationTableRow(
+                  icon: Icons.science_rounded,
+                  category: 'Fertilizer',
+                  recommendation: _getFertilizerRecommendation(result),
+                  impact: '+4%',
+                  impactColor: Colors.greenAccent,
+                ),
+
+                // Irrigation Row
+                _buildRecommendationTableRow(
+                  icon: Icons.water_drop_rounded,
+                  category: 'Irrigation',
+                  recommendation: _getIrrigationRecommendation(result),
+                  impact: '+3%',
+                  impactColor: Colors.greenAccent,
+                ),
+              ],
+            ),
+          ),
+
+          // Summary Footer
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.grey[600],
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Projected Profit',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '₹${currentProfit.toStringAsFixed(0)} → ₹${targetProfit.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1B5E20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationTableRow({
+    required IconData icon,
+    required String category,
+    required String recommendation,
+    required String impact,
+    required Color impactColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    category,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                recommendation,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: impactColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                impact,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: impactColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getPestRecommendation(String crop) {
+    final pestRecommendations = {
+      'Rice': 'Neem oil spray + Trichoderma',
+      'Wheat': 'Chlorpyrifos dust application',
+      'Maize': 'Pheromone traps + Bio-pesticides',
+      'Cotton': 'Bt spray + Yellow sticky traps',
+      'Sugarcane': 'Trichogramma release + Light traps',
+    };
+    return pestRecommendations[crop] ?? 'Integrated Pest Management (IPM)';
+  }
+
+  String _getFertilizerRecommendation(CropPredictionResponse result) {
+    if (result.fertilizerRecommendation.isNotEmpty) {
+      return result.fertilizerRecommendation.take(2).join(' + ');
+    }
+    return 'NPK 10-26-26 + Micronutrients';
+  }
+
+  String _getIrrigationRecommendation(CropPredictionResponse result) {
+    final irrigationType = result.irrigationSuggestion.toLowerCase();
+    if (irrigationType.contains('high') || irrigationType.contains('heavy')) {
+      return 'Drip irrigation every 3 days';
+    } else if (irrigationType.contains('low') ||
+        irrigationType.contains('minimal')) {
+      return 'Sprinkler irrigation weekly';
+    }
+    return 'Drip/Sprinkler every 5 days';
   }
 }

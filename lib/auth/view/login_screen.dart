@@ -6,6 +6,7 @@ import '../../terms&permissions/view/permissions_screen.dart';
 import '../../terms&permissions/controller/terms&conditions_controller.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
 import '../../prior_data/view/simplified_data_collection_flow.dart';
+import '../../widgets/translated_text.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../controller/profile_controller.dart';
 import '../../prior_data/view/simplified_data_collection_flow.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
+import '../../providers/language_provider.dart';
+import '../../constants/languages.dart';
+import '../../widgets/translated_text.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -60,7 +64,7 @@ class _ProfileViewState extends State<ProfileView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const TranslatedText('Profile'),
         backgroundColor: const Color(0xFF2D5016),
         foregroundColor: Colors.white,
         actions: [
@@ -68,12 +72,11 @@ class _ProfileViewState extends State<ProfileView> {
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () => setState(() => _isEditing = true),
-              tooltip: 'Edit Profile',
             ),
         ],
       ),
       body: user == null
-          ? const Center(child: Text('Not logged in'))
+          ? const Center(child: TranslatedText('Not logged in'))
           : StreamBuilder<DocumentSnapshot>(
               stream: _controller.getUserProfileStream(),
               builder: (context, userSnapshot) {
@@ -82,7 +85,9 @@ class _ProfileViewState extends State<ProfileView> {
                 }
 
                 if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                  return const Center(child: Text('No profile data found'));
+                  return const Center(
+                    child: TranslatedText('No profile data found'),
+                  );
                 }
 
                 final userData =
@@ -133,7 +138,14 @@ class _ProfileViewState extends State<ProfileView> {
                             const SizedBox(height: 30),
 
                             // Personal Information Section
-                            _buildSectionHeader('Personal Information'),
+                            const TranslatedText(
+                              'Personal Information',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D5016),
+                              ),
+                            ),
                             const SizedBox(height: 15),
 
                             _buildEditableField(
@@ -161,8 +173,29 @@ class _ProfileViewState extends State<ProfileView> {
 
                             const SizedBox(height: 30),
 
+                            // Language Preference Section
+                            const TranslatedText(
+                              'Language Preference',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D5016),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            _buildLanguageSelector(),
+
+                            const SizedBox(height: 30),
+
                             // Farm Data Section
-                            _buildSectionHeader('Farm Information'),
+                            const TranslatedText(
+                              'Farm Information',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D5016),
+                              ),
+                            ),
                             const SizedBox(height: 15),
 
                             if (hasFarmData && farmData != null) ...[
@@ -201,7 +234,7 @@ class _ProfileViewState extends State<ProfileView> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
+                                              TranslatedText(
                                                 'Using Satellite Data',
                                                 style: TextStyle(
                                                   fontSize: 14,
@@ -210,7 +243,7 @@ class _ProfileViewState extends State<ProfileView> {
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
-                                              Text(
+                                              TranslatedText(
                                                 'For best crop predictions, please update with actual lab test results',
                                                 style: TextStyle(
                                                   fontSize: 12,
@@ -269,7 +302,7 @@ class _ProfileViewState extends State<ProfileView> {
                                       color: Colors.grey[400],
                                     ),
                                     const SizedBox(height: 10),
-                                    Text(
+                                    TranslatedText(
                                       'No farm data collected yet',
                                       style: TextStyle(
                                         color: Colors.grey[600],
@@ -288,7 +321,9 @@ class _ProfileViewState extends State<ProfileView> {
                                         );
                                       },
                                       icon: const Icon(Icons.add),
-                                      label: const Text('Add Farm Data'),
+                                      label: const TranslatedText(
+                                        'Add Farm Data',
+                                      ),
                                       style: TextButton.styleFrom(
                                         foregroundColor: const Color(
                                           0xFF2D5016,
@@ -329,7 +364,7 @@ class _ProfileViewState extends State<ProfileView> {
                                           color: Color(0xFF2D5016),
                                         ),
                                       ),
-                                      child: const Text('Cancel'),
+                                      child: const TranslatedText('Cancel'),
                                     ),
                                   ),
                                   const SizedBox(width: 15),
@@ -359,7 +394,9 @@ class _ProfileViewState extends State<ProfileView> {
                                                     >(Colors.white),
                                               ),
                                             )
-                                          : const Text('Save Changes'),
+                                          : const TranslatedText(
+                                              'Save Changes',
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -388,7 +425,9 @@ class _ProfileViewState extends State<ProfileView> {
                                     );
                                   },
                                   icon: const Icon(Icons.edit),
-                                  label: const Text('Update Farm Data'),
+                                  label: const TranslatedText(
+                                    'Update Farm Data',
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF2D5016),
                                     padding: const EdgeInsets.symmetric(
@@ -417,7 +456,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   }
                                 },
                                 icon: const Icon(Icons.logout),
-                                label: const Text('Logout'),
+                                label: const TranslatedText('Logout'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
@@ -442,7 +481,7 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(
+    return TranslatedText(
       title,
       style: const TextStyle(
         fontSize: 18,
@@ -464,6 +503,7 @@ class _ProfileViewState extends State<ProfileView> {
         icon: icon,
         label: label,
         value: controller.text.isEmpty ? 'Not set' : controller.text,
+        translateLabel: true,
       );
     }
 
@@ -575,10 +615,103 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  Widget _buildLanguageSelector() {
+    return Consumer<LanguageProvider>(
+      builder: (context, languageProvider, child) {
+        return Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F6F0),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2D5016).withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D5016).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.language,
+                  color: Color(0xFF2D5016),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TranslatedText(
+                      'App Language',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: languageProvider.currentLanguage.code,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        isDense: true,
+                      ),
+                      items: AppLanguages.supportedLanguages
+                          .map(
+                            (lang) => DropdownMenuItem(
+                              value: lang.code,
+                              child: Row(
+                                children: [
+                                  Text(lang.nativeName),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '(${lang.name})',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (code) async {
+                        if (code != null) {
+                          final lang = AppLanguages.getLanguageByCode(code);
+                          await languageProvider.changeLanguage(lang);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Language changed to ${lang.nativeName}',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildInfoCard({
     required IconData icon,
     required String label,
     required String value,
+    bool translateLabel = true,
   }) {
     return Container(
       padding: const EdgeInsets.all(15),
@@ -602,10 +735,15 @@ class _ProfileViewState extends State<ProfileView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
+                translateLabel
+                    ? TranslatedText(
+                        label,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      )
+                    : Text(
+                        label,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
                 const SizedBox(height: 4),
                 Text(
                   value,

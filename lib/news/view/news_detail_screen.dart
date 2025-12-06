@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../model/news_article.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../widgets/translated_text.dart';
 
 class NewsDetailScreen extends StatelessWidget {
   final NewsArticle article;
@@ -162,7 +163,7 @@ class NewsDetailScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.visibility, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
-                      Text(
+                      TranslatedText(
                         '${article.viewCount} views',
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
@@ -206,7 +207,7 @@ class NewsDetailScreen extends StatelessWidget {
 
                   // Tags
                   if (article.tags.isNotEmpty) ...[
-                    const Text(
+                    const TranslatedText(
                       'Related Topics',
                       style: TextStyle(
                         fontSize: 16,
@@ -255,8 +256,8 @@ class NewsDetailScreen extends StatelessWidget {
                               subject: article.title,
                             );
                           },
-                          icon: const Icon(Icons.share),
-                          label: const Text('Share Article'),
+                          icon: const Icon(Icons.share, size: 20),
+                          label: const TranslatedText('Share Article'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2D5016),
                             foregroundColor: Colors.white,
@@ -288,7 +289,7 @@ class NewsDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+                          child: TranslatedText(
                             'Information provided is for educational purposes. Consult local agricultural experts for specific advice.',
                             style: TextStyle(
                               fontSize: 12,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../model/farmer_model.dart';
+import '../../widgets/translated_text.dart';
 
 class FarmerProfileCard extends StatelessWidget {
   final FarmerProfile farmer;
@@ -109,7 +110,7 @@ class FarmerProfileCard extends StatelessWidget {
                                       color: const Color(0xFF2D5016),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: const Text(
+                                    child: const TranslatedText(
                                       'You',
                                       style: TextStyle(
                                         color: Colors.white,
@@ -122,7 +123,7 @@ class FarmerProfileCard extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(
+                            TranslatedText(
                               '${farmer.village}, ${farmer.district}',
                               style: TextStyle(
                                 fontSize: 14,
@@ -189,7 +190,7 @@ class FarmerProfileCard extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: onCall,
                             icon: const Icon(Icons.phone, size: 18),
-                            label: const Text('Call'),
+                            label: const TranslatedText('Call'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2D5016),
                               foregroundColor: Colors.white,
@@ -205,7 +206,7 @@ class FarmerProfileCard extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: onMessage,
                             icon: const Icon(Icons.message, size: 18),
-                            label: const Text('Message'),
+                            label: const TranslatedText('Message'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF2D5016),
                               side: const BorderSide(
@@ -234,7 +235,7 @@ class FarmerProfileCard extends StatelessWidget {
                           Icon(Icons.info_outline, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
+                            child: TranslatedText(
                               'Contact details not shared',
                               style: TextStyle(
                                 color: Colors.grey[700],
@@ -260,7 +261,7 @@ class FarmerProfileCard extends StatelessWidget {
                               : Icons.person_add,
                           size: 20,
                         ),
-                        label: Text(
+                        label: TranslatedText(
                           farmer.isFollowing ? 'Unfollow' : 'Follow Farmer',
                           style: const TextStyle(fontSize: 16),
                         ),
@@ -306,7 +307,7 @@ class FarmerProfileCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              TranslatedText(
                 label,
                 style: TextStyle(
                   fontSize: 12,
@@ -315,7 +316,7 @@ class FarmerProfileCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
+              TranslatedText(
                 value,
                 style: const TextStyle(
                   fontSize: 16,
@@ -331,7 +332,7 @@ class FarmerProfileCard extends StatelessWidget {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
+    return TranslatedText(
       title,
       style: const TextStyle(
         fontSize: 16,
@@ -355,7 +356,7 @@ class FarmerProfileCard extends StatelessWidget {
           Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: TranslatedText(
               alert,
               style: TextStyle(fontSize: 13, color: Colors.orange[900]),
             ),
@@ -397,8 +398,11 @@ class FarmerProfileCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-        Text(
+        TranslatedText(
+          label,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        TranslatedText(
           value,
           style: const TextStyle(
             fontSize: 14,

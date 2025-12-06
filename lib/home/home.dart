@@ -4,7 +4,7 @@
 // Screens
 export 'view/screens/home_screen.dart';
 export 'view/screens/month_detail_screen.dart';
-export 'view/screens/daily_action_screen.dart';
+export 'view/screens/daily_actions_screen.dart';
 
 // Controller
 export 'controller/home_controller.dart';

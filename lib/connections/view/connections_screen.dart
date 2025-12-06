@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import '../controller/connections_controller.dart';
 import '../../community_chat/view/community_chat_screen.dart';
 import '../../news/view/news_feed_screen.dart';
 import 'farmer_profile_card.dart';
+import 'bot_screen.dart';
+import '../../widgets/translated_text.dart';
 
 class ConnectionsScreen extends StatefulWidget {
   const ConnectionsScreen({super.key});
@@ -87,7 +90,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                     ),
                     const Spacer(),
                     // Title
-                    const Text(
+                    const TranslatedText(
                       'FarmConnect',
                       style: TextStyle(
                         color: Color(0xFF2D5016),
@@ -122,9 +125,31 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               ),
             ),
 
+            // FarmBot Chatbot Button
+            Positioned(
+              bottom: 40,
+              right: 8,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BotScreen()),
+                  );
+                },
+                child: SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: Lottie.asset(
+                    'assets/Green Robot.json',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+
             // My Location Button
             Positioned(
-              bottom: 120,
+              bottom: 140,
               right: 16,
               child: Consumer<ConnectionsController>(
                 builder: (context, controller, _) {
@@ -196,19 +221,6 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTopNavButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, color: const Color(0xFF2D5016), size: 24),
       ),
     );
   }

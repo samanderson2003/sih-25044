@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'crop_yield_prediction_screen.dart';
 import '../../crop_diseases_detection/view/crop_detection_screen.dart';
+import '../../widgets/translated_text.dart';
 
 class PredictionWithDetectionScreen extends StatefulWidget {
   const PredictionWithDetectionScreen({super.key});
@@ -129,7 +130,7 @@ class _PredictionWithDetectionScreenState
             ),
             const SizedBox(width: 8),
             Flexible(
-              child: Text(
+              child: TranslatedText(
                 label,
                 style: TextStyle(
                   color: isSelected

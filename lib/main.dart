@@ -14,6 +14,7 @@ import 'terms&permissions/view/terms&conditions_view.dart';
 import 'terms&permissions/view/permissions_screen.dart';
 import 'prior_data/controller/farm_data_controller.dart';
 import 'prior_data/view/simplified_data_collection_flow.dart';
+import 'providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +27,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => DiseaseDetectionController(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => DiseaseDetectionController()),
+      ],
       child: MaterialApp(
         title: 'CropYield - Smart Farming',
         debugShowCheckedModeBanner: false,

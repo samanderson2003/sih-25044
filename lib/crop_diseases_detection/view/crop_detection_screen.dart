@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../controller/disease_detection_controller.dart';
 import 'disease_result_screen.dart';
+import '../../widgets/translated_text.dart';
 
 class CropDetectionScreen extends StatefulWidget {
   const CropDetectionScreen({super.key});
@@ -146,16 +147,16 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
             const SizedBox(height: 20),
 
             // Title Section
-            const Text(
+            TranslatedText(
               'Crop Disease Detection',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2D5016),
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            TranslatedText(
               'Upload or capture an image of your crop to detect diseases',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
@@ -195,16 +196,16 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         Icons.info_outline,
                         color: Color(0xFF2D5016),
                         size: 20,
                       ),
-                      SizedBox(width: 8),
-                      Text(
+                      const SizedBox(width: 8),
+                      TranslatedText(
                         'Tips for Best Results',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2D5016),
@@ -231,9 +232,9 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        TranslatedText(
                           'Recent Detections',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2D5016),
@@ -352,7 +353,7 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  TranslatedText(
                     title,
                     style: TextStyle(
                       fontSize: 16,
@@ -361,7 +362,7 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  TranslatedText(
                     description,
                     style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
@@ -387,7 +388,7 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: TranslatedText(
               text,
               style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),

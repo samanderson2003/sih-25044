@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../controller/register_controller.dart';
 import '../model/register_model.dart';
 import '../../terms&permissions/view/terms&conditions_view.dart';
+import '../../widgets/translated_text.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

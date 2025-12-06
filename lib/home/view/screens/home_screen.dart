@@ -11,6 +11,7 @@ import 'month_detail_screen.dart';
 import 'daily_actions_screen.dart';
 import '../../../services/ml_api_service.dart';
 import '../../../prior_data/controller/farm_data_controller.dart';
+import '../../../widgets/translated_text.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -100,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen>
           backgroundColor: const Color(0xFFF8F6F0),
           surfaceTintColor: Colors.transparent,
           scrolledUnderElevation: 0,
-          title: const Text(
+          title: const TranslatedText(
             'Crop Management',
             style: TextStyle(
               color: Color(0xFF2D5016),
@@ -181,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          const TranslatedText(
                             'Select Crop',
                             style: TextStyle(
                               fontSize: 18,
@@ -189,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen>
                               color: Color(0xFF2D5016),
                             ),
                           ),
-                          Text(
+                          TranslatedText(
                             '${controller.crops.length} crops',
                             style: TextStyle(
                               fontSize: 14,
@@ -245,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
                     if (controller.selectedCrop != null) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
+                        child: TranslatedText(
                           'Yearly Calendar - ${controller.selectedCrop!.name}',
                           style: const TextStyle(
                             fontSize: 18,
@@ -343,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
+                                  TranslatedText(
                                     'Tasks for ${_getMonthName(_focusedDay.month)}',
                                     style: const TextStyle(
                                       fontSize: 16,
@@ -366,12 +367,12 @@ class _HomeScreenState extends State<HomeScreen>
                                         ),
                                       );
                                     },
-                                    child: const Text('View All'),
+                                    child: const TranslatedText('View All'),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(
+                              TranslatedText(
                                 '${controller.getWeeklyTasksForMonth(_focusedDay.month).length} weeks planned',
                                 style: TextStyle(
                                   fontSize: 14,
@@ -407,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         const SizedBox(width: 6),
-        Text(
+        TranslatedText(
           label,
           style: const TextStyle(fontSize: 12, color: Color(0xFF2D5016)),
         ),
@@ -445,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen>
               size: 28,
             ),
             const SizedBox(width: 12),
-            const Text(
+            const TranslatedText(
               'Weather Alerts',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -466,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: const TranslatedText(
               'Close',
               style: TextStyle(
                 color: Color(0xFF2D5016),
@@ -498,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen>
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: TranslatedText(
                   alert.title,
                   style: TextStyle(
                     fontSize: 16,
@@ -513,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen>
                   color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
+                child: TranslatedText(
                   _getSeverityLabel(alert.severity),
                   style: const TextStyle(
                     color: Colors.white,
@@ -525,7 +526,7 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
           const SizedBox(height: 8),
-          Text(
+          TranslatedText(
             alert.message,
             style: TextStyle(
               fontSize: 14,
@@ -720,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen>
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF4CAF50),
             ),
-            child: const Text('Go to Today'),
+            child: const TranslatedText('Go to Today'),
           ),
         ],
       ),
@@ -834,7 +835,7 @@ class _HomeScreenState extends State<HomeScreen>
                         : null,
                   ),
                   child: Center(
-                    child: Text(
+                    child: TranslatedText(
                       monthName,
                       style: TextStyle(
                         fontSize: 15,
@@ -964,7 +965,9 @@ class _HomeScreenState extends State<HomeScreen>
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Please complete your farm profile first'),
+                    content: TranslatedText(
+                      'Please complete your farm profile first',
+                    ),
                     backgroundColor: Colors.orange,
                   ),
                 );

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../services/ml_api_service.dart';
+import '../../../widgets/translated_text.dart';
 
 class DailyActionsScreen extends StatefulWidget {
   final DateTime selectedDate;
@@ -142,12 +143,12 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
+            TranslatedText(
               'Unable to Load Plan',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            Text(
+            TranslatedText(
               _error!,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.grey),
@@ -168,7 +169,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                       children: [
                         Icon(Icons.info_outline, color: Colors.orange.shade700),
                         const SizedBox(width: 8),
-                        Text(
+                        TranslatedText(
                           'Start API Server',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -178,7 +179,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text('Open terminal and run:'),
+                    const TranslatedText('Open terminal and run:'),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -201,7 +202,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
             ElevatedButton.icon(
               onPressed: _loadPlan,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: const TranslatedText('Retry'),
             ),
           ],
         ),
@@ -276,7 +277,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      TranslatedText(
                         stage['stage'],
                         style: const TextStyle(
                           fontSize: 24,
@@ -285,7 +286,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      TranslatedText(
                         'Day ${stage['days']} since planting',
                         style: const TextStyle(
                           fontSize: 14,
@@ -309,7 +310,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                   const Icon(Icons.info_outline, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: TranslatedText(
                       stage['description'],
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
@@ -327,7 +328,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                     size: 18,
                   ),
                   const SizedBox(width: 8),
-                  Text(
+                  TranslatedText(
                     '$daysToHarvest days to harvest',
                     style: const TextStyle(
                       color: Colors.white,
@@ -365,7 +366,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
+              child: TranslatedText(
                 alert['message'],
                 style: const TextStyle(fontSize: 14),
               ),
@@ -410,7 +411,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
+                  child: TranslatedText(
                     action['task'],
                     style: const TextStyle(
                       fontSize: 16,
@@ -421,7 +422,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
+            TranslatedText(
               action['description'],
               style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
@@ -467,7 +468,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                   size: 24,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                const TranslatedText(
                   'Expected Yield & Profit',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -519,8 +520,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-          Text(
+          TranslatedText(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          TranslatedText(
             value,
             style: TextStyle(
               fontSize: 14,
@@ -549,7 +553,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TranslatedText(
                   'Powered by AI',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -570,7 +574,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
+    return TranslatedText(
       title,
       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
     );

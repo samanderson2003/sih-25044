@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../controller/news_controller.dart';
 import '../model/news_article.dart';
 import 'news_detail_screen.dart';
+import '../../widgets/translated_text.dart';
 
 class NewsFeedScreen extends StatefulWidget {
   const NewsFeedScreen({super.key});
@@ -58,7 +59,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                     );
                   },
                 )
-              : const Text(
+              : const TranslatedText(
                   'Agricultural News',
                   style: TextStyle(
                     color: Colors.white,
@@ -218,7 +219,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
         children: [
           Icon(Icons.article_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text(
+          TranslatedText(
             'No articles found',
             style: TextStyle(
               fontSize: 18,
@@ -227,7 +228,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          TranslatedText(
             'Try a different search or category',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
@@ -254,8 +255,8 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                 children: [
                   const Icon(Icons.bookmark, color: Color(0xFF2D5016)),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Bookmarked Articles',
+                  const TranslatedText(
+                    'Saved Articles',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -274,8 +275,8 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
             Expanded(
               child: bookmarked.isEmpty
                   ? const Center(
-                      child: Text(
-                        'No bookmarked articles',
+                      child: TranslatedText(
+                        'No saved articles yet',
                         style: TextStyle(color: Colors.grey),
                       ),
                     )

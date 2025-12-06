@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../controller/chat_controller.dart';
 import '../model/chat_message.dart';
+import '../../widgets/translated_text.dart';
 
 class CommunityChatScreen extends StatelessWidget {
   const CommunityChatScreen({super.key});
@@ -27,7 +28,7 @@ class _CommunityChatView extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: const TranslatedText(
           'Community Chat',
           style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
@@ -91,7 +92,7 @@ class _CommunityChatView extends StatelessWidget {
                               color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
-                            Text(
+                            TranslatedText(
                               'No messages yet',
                               style: TextStyle(
                                 fontSize: 18,
@@ -100,7 +101,7 @@ class _CommunityChatView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(
+                            TranslatedText(
                               'Be the first to say hello! 👋',
                               style: TextStyle(
                                 fontSize: 14,
@@ -147,28 +148,31 @@ class _CommunityChatView extends StatelessWidget {
           children: const [
             Icon(Icons.info_outline, color: primaryColor),
             SizedBox(width: 8),
-            Text('Community Guidelines'),
+            TranslatedText('Community Guidelines'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('• Be respectful to all farmers'),
+            TranslatedText('• Be respectful to all farmers'),
             SizedBox(height: 8),
-            Text('• Share helpful farming tips'),
+            TranslatedText('• Share helpful farming tips'),
             SizedBox(height: 8),
-            Text('• Ask questions freely'),
+            TranslatedText('• Ask questions freely'),
             SizedBox(height: 8),
-            Text('• No spam or promotional content'),
+            TranslatedText('• No spam or promotional content'),
             SizedBox(height: 8),
-            Text('• Keep discussions agriculture-related'),
+            TranslatedText('• Keep discussions agriculture-related'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it', style: TextStyle(color: primaryColor)),
+            child: const TranslatedText(
+              'Got it',
+              style: TextStyle(color: primaryColor),
+            ),
           ),
         ],
       ),
