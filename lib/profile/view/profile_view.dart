@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../controller/profile_controller.dart';
+import '../controller/farm_plot_controller.dart';
 import '../../prior_data/view/simplified_data_collection_flow.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
 import '../../providers/language_provider.dart';
 import '../../constants/languages.dart';
 import '../../widgets/translated_text.dart';
+import '../../widgets/farm_plot_visualization.dart';
+import '../../models/farm_plot_model.dart';
+import 'farm_plot_editor_screen.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -19,6 +23,7 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   final _controller = ProfileController();
   final _farmDataController = FarmDataController();
+  final _farmPlotController = FarmPlotController();
   final _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isSaving = false;
@@ -164,7 +169,6 @@ class _ProfileViewState extends State<ProfileView> {
                             //   value: email,
                             // ),
                             // const SizedBox(height: 15),
-
                             _buildEditableField(
                               label: 'Mobile Number',
                               controller: _mobileController,
@@ -284,6 +288,10 @@ class _ProfileViewState extends State<ProfileView> {
                                   farmData['pastData'],
                                   Icons.history,
                                 ),
+                              const SizedBox(height: 15),
+
+                              // Farm Plot Visualization Section
+                              _buildFarmPlotSection(farmData),
                             ] else
                               Container(
                                 padding: const EdgeInsets.all(20),
@@ -479,17 +487,6 @@ class _ProfileViewState extends State<ProfileView> {
                 );
               },
             ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return TranslatedText(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF2D5016),
-      ),
     );
   }
 
@@ -761,5 +758,152 @@ class _ProfileViewState extends State<ProfileView> {
         ],
       ),
     );
+  }
+
+  Widget _buildFarmPlotSection(Map<String, dynamic> farmData) {
+    return StreamBuilder<FarmPlotModel?>(
+      stream: _farmPlotController.getFarmPlotStream(),
+      builder: (context, plotSnapshot) {
+        final hasFarmPlot = plotSnapshot.hasData && plotSnapshot.data != null;
+        final farmPlot = plotSnapshot.data;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.grid_on, color: Color(0xFF2D5016), size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'Farm Plot Layout',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D5016),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasFarmPlot)
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        onPressed: () => _openFarmPlotEditor(farmData),
+                        color: const Color(0xFF2D5016),
+                        tooltip: 'Edit Farm Plot',
+                      ),
+                  ],
+                ),
+              ),
+
+              // Content
+              if (hasFarmPlot && farmPlot != null)
+                FarmPlotVisualization(farmPlot: farmPlot, showStats: true)
+              else
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.grid_4x4,
+                        size: 60,
+                        color: Colors.grey.shade300,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No farm plot designed yet',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create a visual layout of your farm with crop assignments',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _openFarmPlotEditor(farmData),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Farm Plot'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2D5016),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openFarmPlotEditor(Map<String, dynamic> farmData) async {
+    // Get current farm data from Firestore
+    final farmDataModel = await _farmDataController.getFarmData();
+
+    if (farmDataModel == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add farm data first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Navigate to farm plot editor
+    final result = await Navigator.push<FarmPlotModel>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FarmPlotEditorScreen(farmData: farmDataModel),
+      ),
+    );
+
+    // If user saved the farm plot, save it to Firebase
+    if (result != null && mounted) {
+      final saveResult = await _farmPlotController.saveFarmPlot(result);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(saveResult['message']),
+          backgroundColor: saveResult['success'] ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 }
