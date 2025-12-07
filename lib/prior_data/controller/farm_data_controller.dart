@@ -11,15 +11,22 @@ class FarmDataController {
   // Save farm data to Firestore
   Future<Map<String, dynamic>> saveFarmData(FarmDataModel farmData) async {
     try {
+      print('🔐 Checking user authentication...');
       final user = _auth.currentUser;
       if (user == null) {
+        print('❌ User not authenticated');
         return {'success': false, 'message': 'User not authenticated'};
       }
+
+      print('👤 User authenticated: ${user.uid}');
+      print('💾 Saving farm data to Firestore...');
 
       await _firestore
           .collection('farmData')
           .doc(user.uid)
           .set(farmData.toJson(), SetOptions(merge: true));
+
+      print('✅ Farm data saved to farmData collection');
 
       // Also update user's profile completion status
       await _firestore.collection('users').doc(user.uid).set({
@@ -27,8 +34,11 @@ class FarmDataController {
         'farmDataCollected': true,
       }, SetOptions(merge: true));
 
+      print('✅ User profile updated');
+
       return {'success': true, 'message': 'Farm data saved successfully'};
     } catch (e) {
+      print('🔥 Error in saveFarmData: $e');
       return {'success': false, 'message': 'Error saving farm data: $e'};
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../model/farm_data_model.dart';
 import 'map_location_picker.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:open_location_code/open_location_code.dart' as olc;
 
 /// Step 1: Farm Basics - Location, Size, Crop, Season
 /// Simplified from old LandDetailsScreen - only essential ML model inputs
@@ -139,6 +140,7 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
           longitude: result.coordinates.longitude,
           state: result.state,
           district: result.district,
+          plusCode: result.plusCode,
         );
         // Update manual address fields if available
         if (result.address != null) _addressController.text = result.address!;
@@ -185,6 +187,13 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
 
       if (locations.isNotEmpty) {
         final location = locations.first;
+
+        // Generate Plus Code (full precision)
+        final plusCode = olc.PlusCode.encode(
+          olc.LatLng(location.latitude, location.longitude),
+          codeLength: 11,
+        );
+
         setState(() {
           _location = LocationModel(
             latitude: location.latitude,
@@ -195,6 +204,7 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
             district: _cityController.text.isNotEmpty
                 ? _cityController.text
                 : null,
+            plusCode: plusCode.toString(),
           );
           _isGeocodingAddress = false;
         });
@@ -307,6 +317,27 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
                                 fontSize: 16,
                               ),
                             ),
+                            if (_location?.plusCode != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.grid_4x4,
+                                    size: 14,
+                                    color: Color(0xFF2D5016),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _location!.plusCode!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D5016),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             if (_displayAddress.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(

@@ -232,7 +232,7 @@ class _MessageBubble extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
+            TranslatedText(
               message.text,
               style: TextStyle(
                 color: isMe ? Colors.white : Colors.black87,

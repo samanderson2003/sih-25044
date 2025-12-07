@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../../model/weather_model.dart';
+import '../../../widgets/translated_text.dart';
 
 class WeatherIndicator extends StatelessWidget {
   final Weather? weather;
@@ -51,7 +52,7 @@ class WeatherIndicator extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  TranslatedText(
                     weather!.location,
                     style: const TextStyle(
                       color: Color(0xFF64B5F6),
@@ -74,7 +75,7 @@ class WeatherIndicator extends StatelessWidget {
               Expanded(
                 child: _buildWeatherDetailCard(
                   Icons.thermostat_outlined,
-                  'Soil temp',
+                  TranslatedText('Soil temp'),
                   '+${(weather!.temperature - 5).toStringAsFixed(0)} C',
                 ),
               ),
@@ -82,7 +83,7 @@ class WeatherIndicator extends StatelessWidget {
               Expanded(
                 child: _buildWeatherDetailCard(
                   Icons.water_drop_outlined,
-                  'Humidity',
+                  TranslatedText('Humidity'),
                   '${weather!.humidity.toInt()}%',
                 ),
               ),
@@ -93,7 +94,7 @@ class WeatherIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherDetailCard(IconData icon, String label, String value) {
+  Widget _buildWeatherDetailCard(IconData icon, Widget label, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -121,13 +122,13 @@ class WeatherIndicator extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
+                DefaultTextStyle(
                   style: const TextStyle(
                     color: Color(0xFF64B5F6),
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
+                  child: label,
                 ),
                 const SizedBox(height: 2),
                 Text(

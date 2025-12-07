@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../model/crop_model.dart';
+import '../../../widgets/translated_text.dart';
 
 class CropTile extends StatelessWidget {
   final Crop crop;
@@ -48,7 +49,7 @@ class CropTile extends StatelessWidget {
           children: [
             Text(crop.icon, style: const TextStyle(fontSize: 32)),
             const SizedBox(height: 8),
-            Text(
+            TranslatedText(
               crop.name,
               style: TextStyle(
                 color: isSelected ? Colors.white : const Color(0xFF2D5016),

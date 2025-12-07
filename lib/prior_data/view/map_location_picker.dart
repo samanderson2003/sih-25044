@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:open_location_code/open_location_code.dart' as olc;
 
 class LocationData {
   final LatLng coordinates;
@@ -10,6 +11,7 @@ class LocationData {
   final String? district;
   final String? state;
   final String? pincode;
+  final String? plusCode; // Open Location Code
 
   LocationData({
     required this.coordinates,
@@ -18,6 +20,7 @@ class LocationData {
     this.district,
     this.state,
     this.pincode,
+    this.plusCode,
   });
 }
 
@@ -48,6 +51,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
   String? _district;
   String? _state;
   String? _pincode;
+  String? _plusCode; // Open Location Code
   bool _isLoadingAddress = false;
 
   static const Color primaryColor = Color(0xFF2D5016);
@@ -65,8 +69,15 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
   }
 
   Future<void> _updateMarker(LatLng position) async {
+    // Generate Plus Code from coordinates (full precision)
+    final plusCode = olc.PlusCode.encode(
+      olc.LatLng(position.latitude, position.longitude),
+      codeLength: 11,
+    );
+
     setState(() {
       _selectedLocation = position;
+      _plusCode = plusCode.toString();
       _markers = {
         Marker(
           markerId: const MarkerId('farm_location'),
@@ -222,6 +233,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
       district: _district,
       state: _state,
       pincode: _pincode,
+      plusCode: _plusCode,
     );
 
     Navigator.pop(context, locationData);
@@ -302,6 +314,32 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Plus Code Display
+                            if (_plusCode != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.grid_4x4,
+                                      color: primaryColor,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Plus Code: $_plusCode',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            // Lat/Long Display
                             Row(
                               children: [
                                 Icon(

@@ -107,7 +107,7 @@ class NewsDetailScreen extends StatelessWidget {
                           color: Colors.white,
                         ),
                         const SizedBox(width: 6),
-                        Text(
+                        TranslatedText(
                           article.category,
                           style: const TextStyle(
                             color: Colors.white,
@@ -121,7 +121,7 @@ class NewsDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Title
-                  Text(
+                  TranslatedText(
                     article.title,
                     style: const TextStyle(
                       fontSize: 26,
@@ -137,7 +137,7 @@ class NewsDetailScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.source, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
-                      Text(
+                      TranslatedText(
                         article.source,
                         style: TextStyle(
                           fontSize: 14,
@@ -182,7 +182,7 @@ class NewsDetailScreen extends StatelessWidget {
                         width: 1,
                       ),
                     ),
-                    child: Text(
+                    child: TranslatedText(
                       article.description,
                       style: const TextStyle(
                         fontSize: 16,
@@ -195,7 +195,7 @@ class NewsDetailScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Full Content
-                  Text(
+                  TranslatedText(
                     article.content,
                     style: TextStyle(
                       fontSize: 16,
@@ -232,7 +232,7 @@ class NewsDetailScreen extends StatelessWidget {
                               color: const Color(0xFF2D5016).withOpacity(0.3),
                             ),
                           ),
-                          child: Text(
+                          child: TranslatedText(
                             '#$tag',
                             style: const TextStyle(
                               fontSize: 14,

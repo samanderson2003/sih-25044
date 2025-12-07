@@ -25,51 +25,76 @@ class TranslatedText extends StatefulWidget {
 
 class _TranslatedTextState extends State<TranslatedText> {
   String? _translatedText;
+  String? _lastLanguageCode;
+  String? _lastTranslatedForText;
+  bool _isTranslating = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _translate();
+    _checkAndTranslate();
   }
 
   @override
   void didUpdateWidget(TranslatedText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text) {
-      _translate();
+      _lastTranslatedForText = null; // Reset when text changes
+      _checkAndTranslate();
     }
   }
 
-  Future<void> _translate() async {
+  void _checkAndTranslate() {
     final languageProvider = Provider.of<LanguageProvider>(
       context,
       listen: false,
     );
 
-    print(
-      '🔤 TranslatedText: "${widget.text}" | Language: ${languageProvider.currentLanguage.code}',
+    final currentLangCode = languageProvider.currentLanguage.code;
+
+    // Only translate if:
+    // 1. Language changed OR
+    // 2. We haven't translated this text for this language yet
+    if (_lastLanguageCode != currentLangCode ||
+        _lastTranslatedForText != widget.text) {
+      _lastLanguageCode = currentLangCode;
+      _lastTranslatedForText = widget.text;
+      _translate();
+    }
+  }
+
+  Future<void> _translate() async {
+    if (_isTranslating) return; // Prevent duplicate translations
+
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
     );
 
     // If English, no translation needed
     if (languageProvider.isEnglish) {
-      print('🏴󠁧󠁢󠁥󠁮󠁧󠁿 Skipping translation (English selected)');
-      setState(() {
-        _translatedText = widget.text;
-      });
+      if (mounted && _translatedText != widget.text) {
+        setState(() {
+          _translatedText = widget.text;
+        });
+      }
       return;
     }
 
-    print('🇮🇳 Translating to Odia...');
+    _isTranslating = true;
+
     final translated = await TranslationService.translate(
       widget.text,
       targetLanguage: languageProvider.currentLanguage.code,
     );
 
-    if (mounted) {
+    if (mounted && _translatedText != translated) {
       setState(() {
         _translatedText = translated;
+        _isTranslating = false;
       });
-      print('✅ Updated UI with: $translated');
+    } else {
+      _isTranslating = false;
     }
   }
 
@@ -77,8 +102,15 @@ class _TranslatedTextState extends State<TranslatedText> {
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
-        // Re-translate whenever language changes
-        Future.microtask(() => _translate());
+        // Only schedule translation if language actually changed
+        if (_lastLanguageCode != languageProvider.currentLanguage.code &&
+            !_isTranslating) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _checkAndTranslate();
+            }
+          });
+        }
 
         return Text(
           _translatedText ?? widget.text,
