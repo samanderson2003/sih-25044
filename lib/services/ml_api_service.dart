@@ -4,12 +4,13 @@ import 'package:http/http.dart' as http;
 
 class MLApiService {
   // Android Emulator: Use 10.0.2.2 (maps to host's localhost)
-  // Physical Device: Use your Mac's IP (e.g., 'http://192.168.1.10:5000')
+  // Physical Device: Use your Mac's IP (e.g., 'http://192.168.1.10:5002')
   // Find IP: System Settings > Network > Wi-Fi > Details
-  static const String baseUrl = 'http://10.0.2.2:5001';
+  // Port 5002 for Crop Yield API (port 5000 conflicts with macOS AirPlay)
+  static const String baseUrl = 'http://192.168.5.102:5002'; // Crop Yield API
 
-  // For physical device testing, use your Mac's IP:
-  // static const String baseUrl = 'http://192.168.1.XXX:5000';
+  // For Android emulator testing, use:
+  // static const String baseUrl = 'http://10.0.2.2:5002';
 
   /// Check if API server is running
   static Future<bool> checkHealth() async {

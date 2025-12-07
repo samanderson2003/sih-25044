@@ -16,6 +16,47 @@ class CropDetectionScreen extends StatefulWidget {
 
 class _CropDetectionScreenState extends State<CropDetectionScreen> {
   final ImagePicker _picker = ImagePicker();
+  String? _selectedCrop;
+
+  // Available crops matching your trained models
+  final List<Map<String, dynamic>> _availableCrops = [
+    {
+      'name': 'Rice',
+      'key': 'rice_segmented',
+      'icon': '🌾',
+      'color': Color(0xFFD4AF37),
+    },
+    {
+      'name': 'Tomato',
+      'key': 'tomato_segmented',
+      'icon': '🍅',
+      'color': Color(0xFFFF6347),
+    },
+    {
+      'name': 'Apple',
+      'key': 'apple_segmented',
+      'icon': '🍎',
+      'color': Color(0xFFDC143C),
+    },
+    {
+      'name': 'Grape',
+      'key': 'grape_segmented',
+      'icon': '🍇',
+      'color': Color(0xFF6A5ACD),
+    },
+    {
+      'name': 'Strawberry',
+      'key': 'strawberry_segmented',
+      'icon': '🍓',
+      'color': Color(0xFFFF1493),
+    },
+    {
+      'name': 'Peach',
+      'key': 'peach_segmented',
+      'icon': '🍑',
+      'color': Color(0xFFFFDAB9),
+    },
+  ];
 
   @override
   void initState() {
@@ -87,7 +128,10 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
       ),
     );
 
-    final result = await controller.detectDisease(imageFile);
+    final result = await controller.detectDisease(
+      imageFile,
+      modelKey: _selectedCrop, // Pass selected crop model
+    );
 
     if (mounted) {
       Navigator.pop(context); // Close loading dialog
@@ -139,177 +183,305 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 20),
+      body: _selectedCrop == null
+          ? _buildCropSelectionView()
+          : _buildImageCaptureView(),
+    );
+  }
 
-            // Title Section
+  Widget _buildCropSelectionView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
+
+          // Title
+          TranslatedText(
+            'Select Crop Type',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D5016),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TranslatedText(
+            'Choose the crop you want to analyze for diseases',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 30),
+
+          // Crop Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: _availableCrops.length,
+            itemBuilder: (context, index) {
+              final crop = _availableCrops[index];
+              return _buildCropCard(crop);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCropCard(Map<String, dynamic> crop) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedCrop = crop['key'];
+        });
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: (crop['color'] as Color).withOpacity(0.3),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Emoji Icon
+            Text(crop['icon'], style: const TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            // Crop Name
             TranslatedText(
-              'Crop Disease Detection',
-              style: const TextStyle(
-                fontSize: 24,
+              crop['name'],
+              style: TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D5016),
+                color: crop['color'],
               ),
             ),
-            const SizedBox(height: 8),
-            TranslatedText(
-              'Upload or capture an image of your crop to detect diseases',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Camera Option
-            _buildDetectionOption(
-              icon: Icons.camera_alt,
-              title: 'Take Photo',
-              description: 'Capture image using camera',
-              color: const Color(0xFF2D5016),
-              onTap: () => _pickImage(ImageSource.camera),
-            ),
-            const SizedBox(height: 16),
+  Widget _buildImageCaptureView() {
+    final selectedCropData = _availableCrops.firstWhere(
+      (crop) => crop['key'] == _selectedCrop,
+    );
 
-            // Gallery Option
-            _buildDetectionOption(
-              icon: Icons.photo_library,
-              title: 'Choose from Gallery',
-              description: 'Select image from your device',
-              color: const Color(0xFF3D6B23),
-              onTap: () => _pickImage(ImageSource.gallery),
-            ),
-            const SizedBox(height: 30),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 20),
 
-            // Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2D5016).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF2D5016).withOpacity(0.3),
+          // Back button and selected crop display
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedCrop = null;
+                  });
+                },
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF2D5016)),
+              ),
+              Text(
+                selectedCropData['icon'],
+                style: const TextStyle(fontSize: 32),
+              ),
+              const SizedBox(width: 8),
+              TranslatedText(
+                selectedCropData['name'],
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: selectedCropData['color'],
                 ),
               ),
-              child: Column(
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Title Section
+          TranslatedText(
+            'Crop Disease Detection',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D5016),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TranslatedText(
+            'Upload or capture an image of your crop to detect diseases',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 30),
+
+          // Camera Option
+          _buildDetectionOption(
+            icon: Icons.camera_alt,
+            title: 'Take Photo',
+            description: 'Capture image using camera',
+            color: const Color(0xFF2D5016),
+            onTap: () => _pickImage(ImageSource.camera),
+          ),
+          const SizedBox(height: 16),
+
+          // Gallery Option
+          _buildDetectionOption(
+            icon: Icons.photo_library,
+            title: 'Choose from Gallery',
+            description: 'Select image from your device',
+            color: const Color(0xFF3D6B23),
+            onTap: () => _pickImage(ImageSource.gallery),
+          ),
+          const SizedBox(height: 30),
+
+          // Info Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D5016).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF2D5016).withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Color(0xFF2D5016),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    TranslatedText(
+                      'Tips for Best Results',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D5016),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildTipItem('Ensure good lighting conditions'),
+                _buildTipItem('Focus on affected leaf or plant part'),
+                _buildTipItem('Avoid blurry or distant images'),
+                _buildTipItem('Capture clear visible symptoms'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          // Recent Detections
+          Consumer<DiseaseDetectionController>(
+            builder: (context, controller, _) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Color(0xFF2D5016),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
                       TranslatedText(
-                        'Tips for Best Results',
+                        'Recent Detections',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2D5016),
                         ),
                       ),
+                      if (controller.history.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Clear History'),
+                                content: const Text(
+                                  'Are you sure you want to clear all detection history?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      controller.clearHistory();
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text(
+                                      'Clear',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: const Text('Clear All'),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildTipItem('Ensure good lighting conditions'),
-                  _buildTipItem('Focus on affected leaf or plant part'),
-                  _buildTipItem('Avoid blurry or distant images'),
-                  _buildTipItem('Capture clear visible symptoms'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Recent Detections
-            Consumer<DiseaseDetectionController>(
-              builder: (context, controller, _) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TranslatedText(
-                          'Recent Detections',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2D5016),
+                  const SizedBox(height: 16),
+                  if (controller.history.isEmpty)
+                    Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.history,
+                            size: 60,
+                            color: Colors.grey[400],
                           ),
-                        ),
-                        if (controller.history.isNotEmpty)
-                          TextButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Clear History'),
-                                  content: const Text(
-                                    'Are you sure you want to clear all detection history?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        controller.clearHistory();
-                                        Navigator.pop(context);
-                                      },
-                                      child: const Text(
-                                        'Clear',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text('Clear All'),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No recent detections',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (controller.history.isEmpty)
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.history,
-                              size: 60,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No recent detections',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: controller.history.length,
-                        itemBuilder: (context, index) {
-                          final item = controller.history[index];
-                          return _buildHistoryItem(item, index);
-                        },
+                        ],
                       ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: controller.history.length,
+                      itemBuilder: (context, index) {
+                        final item = controller.history[index];
+                        return _buildHistoryItem(item, index);
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

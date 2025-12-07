@@ -734,6 +734,6 @@ if __name__ == '__main__':
     print(f"✅ Model Status: {'Loaded' if model else 'Not Loaded'}")
     print(f"✅ Features: {len(feature_cols) if feature_cols else 0}")
     print("="*70)
-    print("\n🚀 Starting server on http://localhost:5001\n")
+    print("\n🚀 Starting Crop Yield API server on http://localhost:5002\n")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)

@@ -1,0 +1,161 @@
+╔════════════════════════════════════════════════════════════════╗
+║           🌾 SMART FARMING APP - QUICK START GUIDE 🌾          ║
+╚════════════════════════════════════════════════════════════════╝
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  🚀 ONE COMMAND TO START EVERYTHING                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+  ./start_app.sh
+
+This will automatically start:
+  ✅ Crop Yield Prediction API (ML) - Port 5000
+  ✅ Plant Disease Detection API (DL) - Port 5001  
+  ✅ Flutter Mobile App
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  📊 SERVICES & PORTS                                          ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────┐
+│ Crop Yield Prediction (ML)                                  │
+├─────────────────────────────────────────────────────────────┤
+│ Port:        5000                                           │
+│ URL:         http://localhost:5000                          │
+│ Emulator:    http://10.0.2.2:5000                          │
+│ Technology:  Flask + XGBoost                                │
+│ Purpose:     Daily farming recommendations & yield predict. │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Plant Disease Detection (DL)                                │
+├─────────────────────────────────────────────────────────────┤
+│ Port:        5001                                           │
+│ URL:         http://localhost:5001                          │
+│ Emulator:    http://10.0.2.2:5001                          │
+│ Technology:  FastAPI + TensorFlow/Keras                     │
+│ Models:      Rice, Tomato, Apple, Grape, Strawberry, Peach │
+└─────────────────────────────────────────────────────────────┘
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  📱 APP FEATURES                                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+🏠 Home Tab
+  • Farm plot visualization
+  • Weather information
+  • Monthly calendar
+  • Crop selection
+
+📊 Daily Plan (Calendar → Click Date)
+  • AI-powered farming recommendations
+  • Crop yield predictions
+  • Weather-based suggestions
+  • Irrigation & fertilization schedule
+
+🔬 Prediction Tab (Disease Detection)
+  • Select crop type (6 crops available)
+  • Capture/upload plant image
+  • Real-time disease detection
+  • 99%+ accuracy with trained models
+
+📰 News Tab
+  • Agricultural news feed
+  • Category filters
+  • Bookmarks
+  • Searchable articles
+
+💬 Connect Tab
+  • Community chat
+  • Farmer discussions
+  • Share experiences
+
+👤 Profile Tab
+  • User information
+  • Language switching (English ↔ Odia)
+  • Settings
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  🔧 TROUBLESHOOTING                                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+❌ "Port already in use"
+   → Kill processes: lsof -i :5000 or lsof -i :5001
+   → Kill: kill -9 <PID>
+
+❌ "Cannot connect to API"
+   → Check server logs: tail -f engine/api/api_server.log
+   → Check disease API: tail -f engine/plants_disease/disease_api.log
+   → Test: curl http://localhost:5000/health
+   → Test: curl http://localhost:5001/health
+
+❌ "No trained models"
+   → Train models: cd engine/plants_disease
+   → Follow: python3 train_plant_disease.py
+
+❌ Real device can't connect
+   → Use your computer's IP instead of 10.0.2.2
+   → Find IP: ipconfig getifaddr en0
+   → Update in Flutter code
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  🛑 STOP EVERYTHING                                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+  Press Ctrl+C in the terminal running start_app.sh
+
+  This will gracefully shutdown:
+  • Crop Yield API (Flask)
+  • Disease Detection API (FastAPI)
+  • Flutter app
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  📚 DOCUMENTATION                                             ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+  DISEASE_DETECTION_INTEGRATION.md - Full disease detection guide
+  engine/plants_disease/SERVER_SETUP.md - Server configuration
+  README.md - General project overview
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ✅ TESTING CHECKLIST                                         ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+  □ Run ./start_app.sh successfully
+  □ Both APIs show "running" status
+  □ Flutter app launches on device/emulator
+  □ Home screen displays farm plot
+  □ Calendar opens daily plan on date click
+  □ Prediction tab shows crop selection
+  □ Disease detection works (select crop → upload image)
+  □ News feed loads articles
+  □ Community chat accessible
+  □ Language switching works (Profile → Odia)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  🎯 QUICK TIPS                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+  💡 For best disease detection results:
+     • Use clear, well-lit images
+     • Focus on affected leaf/plant part
+     • Avoid blurry photos
+     • Capture visible symptoms
+
+  💡 Trained models available:
+     • 🌾 Rice (3 diseases)
+     • 🍅 Tomato (multiple diseases)
+     • 🍎 Apple
+     • 🍇 Grape  
+     • 🍓 Strawberry
+     • 🍑 Peach
+
+  💡 All content translates to Odia:
+     • News articles
+     • UI labels
+     • Disease names
+     • Recommendations
+
+╔════════════════════════════════════════════════════════════════╗
+║                 Made with ❤️ for Smart Farming                 ║
+╚════════════════════════════════════════════════════════════════╝
