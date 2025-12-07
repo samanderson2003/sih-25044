@@ -731,18 +731,18 @@ class _HomeScreenState extends State<HomeScreen>
   // Month Selection View - Grid of months
   Widget _buildMonthSelectionView(HomeController controller) {
     final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
+      'January',
+      'February',
+      'March',
+      'April',
       'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     return Padding(
@@ -886,7 +886,7 @@ class _HomeScreenState extends State<HomeScreen>
                     _calendarView = 'month';
                   });
                 },
-                child: Text(
+                child: TranslatedText(
                   '${_getMonthName(_focusedDay.month)} ${_focusedDay.year}',
                   style: const TextStyle(
                     fontSize: 18,
@@ -922,6 +922,99 @@ class _HomeScreenState extends State<HomeScreen>
             calendarFormat: CalendarFormat.month,
             startingDayOfWeek: StartingDayOfWeek.monday,
             headerVisible: false,
+            daysOfWeekHeight: 40,
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              weekendStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              dowBuilder: (context, day) {
+                final dayNames = {
+                  DateTime.monday: 'Mon',
+                  DateTime.tuesday: 'Tue',
+                  DateTime.wednesday: 'Wed',
+                  DateTime.thursday: 'Thu',
+                  DateTime.friday: 'Fri',
+                  DateTime.saturday: 'Sat',
+                  DateTime.sunday: 'Sun',
+                };
+                return Center(
+                  child: TranslatedText(
+                    dayNames[day.weekday] ?? '',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color:
+                          day.weekday == DateTime.saturday ||
+                              day.weekday == DateTime.sunday
+                          ? const Color(0xFFE57373)
+                          : const Color(0xFF2D5016),
+                    ),
+                  ),
+                );
+              },
+              defaultBuilder: (context, day, focusedDay) {
+                // Get suitability for the current month
+                final suitability = controller.getSuitabilityForMonth(
+                  day.month,
+                );
+                Color backgroundColor = Colors.white.withOpacity(0.5);
+
+                if (suitability != null) {
+                  // Use season color with lower opacity for better readability
+                  backgroundColor = suitability.color.withOpacity(0.3);
+                }
+
+                return Container(
+                  margin: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${day.day}',
+                      style: const TextStyle(
+                        color: Color(0xFF2D5016),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              todayBuilder: (context, day, focusedDay) {
+                return Container(
+                  margin: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFA5D6A7).withOpacity(0.5),
+                        Color(0xFF81C784).withOpacity(0.5),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Color(0xFF66BB6A), width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${day.day}',
+                      style: const TextStyle(
+                        color: Color(0xFF2D5016),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1005,93 +1098,6 @@ class _HomeScreenState extends State<HomeScreen>
               });
               controller.selectMonth(focusedDay.month);
             },
-            calendarBuilders: CalendarBuilders(
-              defaultBuilder: (context, day, focusedDay) {
-                // Get suitability for the current month
-                final suitability = controller.getSuitabilityForMonth(
-                  day.month,
-                );
-                Color backgroundColor = Colors.white.withOpacity(0.5);
-
-                if (suitability != null) {
-                  // Use season color with lower opacity for better readability
-                  backgroundColor = suitability.color.withOpacity(0.3);
-                }
-
-                return Container(
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${day.day}',
-                      style: const TextStyle(
-                        color: Color(0xFF2D5016),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              todayBuilder: (context, day, focusedDay) {
-                return Container(
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFFA5D6A7).withOpacity(0.5),
-                        Color(0xFF81C784).withOpacity(0.5),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Color(0xFF66BB6A), width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${day.day}',
-                      style: const TextStyle(
-                        color: Color(0xFF1B5E20),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              selectedBuilder: (context, day, focusedDay) {
-                return Container(
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF66BB6A), Color(0xFF4CAF50)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFF4CAF50).withOpacity(0.4),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${day.day}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),

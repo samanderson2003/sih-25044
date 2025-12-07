@@ -121,7 +121,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: TranslatedText(
           'Daily Plan - ${DateFormat('MMM dd, yyyy').format(widget.selectedDate)}',
         ),
         backgroundColor: const Color(0xFF27AE60),

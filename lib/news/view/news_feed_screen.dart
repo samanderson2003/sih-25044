@@ -5,6 +5,7 @@ import '../controller/news_controller.dart';
 import '../model/news_article.dart';
 import 'news_detail_screen.dart';
 import '../../widgets/translated_text.dart';
+import '../../providers/language_provider.dart';
 
 class NewsFeedScreen extends StatefulWidget {
   const NewsFeedScreen({super.key});
@@ -50,9 +51,16 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                       controller: _searchController,
                       autofocus: true,
                       style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: 'Search news...',
-                        hintStyle: TextStyle(color: Colors.white70),
+                      decoration: InputDecoration(
+                        hintText:
+                            Provider.of<LanguageProvider>(
+                                  context,
+                                  listen: false,
+                                ).currentLanguage ==
+                                'en'
+                            ? 'Search news...'
+                            : 'ସମ୍ବାଦ ଖୋଜନ୍ତୁ...',
+                        hintStyle: const TextStyle(color: Colors.white70),
                         border: InputBorder.none,
                       ),
                       onChanged: (query) => _onSearchChanged(query, controller),
@@ -193,7 +201,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: FilterChip(
-              label: Text(category),
+              label: TranslatedText(category),
               selected: isSelected,
               onSelected: (_) => controller.selectCategory(category),
               backgroundColor: Colors.white,
@@ -295,12 +303,12 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                               ),
                             ),
                           ),
-                          title: Text(
+                          title: TranslatedText(
                             bookmarked[index].title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text(bookmarked[index].category),
+                          subtitle: TranslatedText(bookmarked[index].category),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
@@ -390,7 +398,7 @@ class _NewsCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                           const SizedBox(width: 4),
-                          Text(
+                          TranslatedText(
                             article.category,
                             style: const TextStyle(
                               color: Colors.white,
@@ -433,7 +441,7 @@ class _NewsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Title
-                  Text(
+                  TranslatedText(
                     article.title,
                     style: const TextStyle(
                       fontSize: 18,
@@ -446,7 +454,7 @@ class _NewsCard extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   // Description
-                  Text(
+                  TranslatedText(
                     article.description,
                     style: TextStyle(
                       fontSize: 14,
