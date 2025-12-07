@@ -8,6 +8,10 @@ class TranslationService {
   // Cache to avoid repeated API calls for same text
   static final Map<String, Map<String, String>> _cache = {};
 
+  // Rate limiting
+  static DateTime? _lastRequestTime;
+  static const _minDelayBetweenRequests = Duration(milliseconds: 100);
+
   /// Translate text to target language using Sarvam AI
   /// [text] - The text to translate
   /// [targetLanguage] - Target language code ('or' for Odia, 'en' for English)
@@ -20,21 +24,26 @@ class TranslationService {
     // If target is same as source, return original
     if (targetLanguage == sourceLanguage) return text;
 
-    // Check cache
+    // Check cache first
     if (_cache.containsKey(targetLanguage) &&
         _cache[targetLanguage]!.containsKey(text)) {
-      print('📦 Using cached translation for: $text');
       return _cache[targetLanguage]![text]!;
     }
 
-    print('🌐 Translating "$text" from $sourceLanguage to $targetLanguage');
+    // Rate limiting - add small delay between requests
+    if (_lastRequestTime != null) {
+      final timeSinceLastRequest = DateTime.now().difference(_lastRequestTime!);
+      if (timeSinceLastRequest < _minDelayBetweenRequests) {
+        await Future.delayed(_minDelayBetweenRequests - timeSinceLastRequest);
+      }
+    }
 
     try {
       // Sarvam AI uses language codes like 'en-IN', 'od-IN' (not or-IN!)
       final sourceCode = sourceLanguage == 'en' ? 'en-IN' : 'od-IN';
       final targetCode = targetLanguage == 'or' ? 'od-IN' : 'en-IN';
 
-      print('🔄 API Request: $sourceCode -> $targetCode');
+      _lastRequestTime = DateTime.now();
 
       final response = await http.post(
         Uri.parse(_baseUrl),
@@ -53,25 +62,23 @@ class TranslationService {
         }),
       );
 
-      print('📡 API Response Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('✅ API Response: $data');
         final translatedText = data['translated_text'] as String;
 
         // Cache the result
         _cache[targetLanguage] ??= {};
         _cache[targetLanguage]![text] = translatedText;
 
-        print('✨ Translated: "$text" -> "$translatedText"');
         return translatedText;
+      } else if (response.statusCode == 429) {
+        // Rate limit hit - wait and retry once
+        await Future.delayed(const Duration(seconds: 1));
+        return text; // Return original to avoid cascading failures
       } else {
-        print('❌ Translation error: ${response.statusCode} - ${response.body}');
         return text; // Return original on error
       }
     } catch (e) {
-      print('💥 Translation exception: $e');
       return text; // Return original on error
     }
   }
