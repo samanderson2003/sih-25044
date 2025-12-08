@@ -155,6 +155,12 @@ class FarmerProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
+                  // Satellite Health Data
+                  if (farmer.ndviMean != null) ...[
+                    _buildSatelliteHealthSection(),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Irrigation Method
                   _buildInfoRow(
                     icon: Icons.water_drop,
@@ -417,6 +423,259 @@ class FarmerProfileCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildSatelliteHealthSection() {
+    final ndvi = farmer.ndviMean ?? 0.0;
+    final ndre = farmer.ndreMean ?? 0.0;
+    final ndwi = farmer.ndwiMean ?? 0.0;
+    final savi = farmer.saviMean ?? 0.0;
+    final status = farmer.healthStatus ?? 'unknown';
+    final confidence = (farmer.confidence ?? 0.0) * 100;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            _getHealthStatusColor(status).withOpacity(0.1),
+            _getHealthStatusColor(status).withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getHealthStatusColor(status).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.satellite_alt,
+                color: _getHealthStatusColor(status),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Satellite Health Analysis',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D5016),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Health Status Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _getHealthStatusColor(status),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getHealthStatusIcon(status),
+                  color: Colors.white,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${status.toUpperCase()} (${confidence.toStringAsFixed(0)}% confidence)',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Vegetation Indices
+          Row(
+            children: [
+              Expanded(
+                child: _buildIndexCard(
+                  'NDVI',
+                  ndvi.toStringAsFixed(3),
+                  '🌱 Biomass',
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildIndexCard(
+                  'NDRE',
+                  ndre.toStringAsFixed(3),
+                  '🌿 Chlorophyll',
+                  Colors.teal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildIndexCard(
+                  'NDWI',
+                  ndwi.toStringAsFixed(3),
+                  '💧 Water',
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildIndexCard(
+                  'SAVI',
+                  savi.toStringAsFixed(3),
+                  '🌾 Soil-Adj',
+                  Colors.brown,
+                ),
+              ),
+            ],
+          ),
+
+          // Stress info if detected
+          if (farmer.stressDetected == true) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _getStressTypeMessage(farmer.stressType ?? 'unknown'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 8),
+          Text(
+            '🛰️ Data from Sentinel-2 satellite imagery (30-day analysis)',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndexCard(
+    String label,
+    String value,
+    String description,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D5016),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            description,
+            style: TextStyle(fontSize: 9, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getHealthStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return Colors.green;
+      case 'moderate':
+        return Colors.orange;
+      case 'stressed':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getHealthStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return Icons.check_circle;
+      case 'moderate':
+        return Icons.warning;
+      case 'stressed':
+        return Icons.error;
+      default:
+        return Icons.help;
+    }
+  }
+
+  String _getStressTypeMessage(String stressType) {
+    switch (stressType) {
+      case 'disease_or_pest':
+        return 'Possible disease or pest infestation detected';
+      case 'water_stress':
+        return 'Water stress detected - irrigation recommended';
+      case 'early_stress':
+        return 'Early stress signs detected - monitor closely';
+      case 'nutrient_deficiency':
+        return 'Possible nutrient deficiency detected';
+      default:
+        return 'Vegetation stress detected';
+    }
   }
 
   Widget _buildPredictionRow(String label, String value) {

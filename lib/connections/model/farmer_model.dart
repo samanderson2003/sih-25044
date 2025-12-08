@@ -16,6 +16,20 @@ class FarmerProfile {
   final String? profileImage;
   final bool isFollowing;
 
+  // Satellite-based crop health monitoring
+  final bool? stressDetected;
+  final String? healthStatus; // 'healthy', 'moderate', 'stressed', 'unknown'
+  final String?
+  stressType; // 'disease_or_pest', 'water_stress', 'early_stress', 'none', 'unknown'
+  final double? confidence;
+  final double? ndviMean;
+  final double? ndreMean;
+  final double? ndwiMean;
+  final double? saviMean;
+  final List<String>? healthIndicators;
+  final List<String>? recommendations;
+  final String? disclaimer;
+
   FarmerProfile({
     required this.id,
     required this.name,
@@ -33,6 +47,17 @@ class FarmerProfile {
     this.latestPrediction,
     this.profileImage,
     this.isFollowing = false,
+    this.stressDetected,
+    this.healthStatus,
+    this.stressType,
+    this.confidence,
+    this.ndviMean,
+    this.ndreMean,
+    this.ndwiMean,
+    this.saviMean,
+    this.healthIndicators,
+    this.recommendations,
+    this.disclaimer,
   });
 
   factory FarmerProfile.fromJson(Map<String, dynamic> json) {
@@ -55,6 +80,21 @@ class FarmerProfile {
           : null,
       profileImage: json['profileImage'],
       isFollowing: json['isFollowing'] ?? false,
+      stressDetected: json['stressDetected'],
+      healthStatus: json['healthStatus'],
+      stressType: json['stressType'],
+      confidence: json['confidence']?.toDouble(),
+      ndviMean: json['ndviMean']?.toDouble(),
+      ndreMean: json['ndreMean']?.toDouble(),
+      ndwiMean: json['ndwiMean']?.toDouble(),
+      saviMean: json['saviMean']?.toDouble(),
+      healthIndicators: json['healthIndicators'] != null
+          ? List<String>.from(json['healthIndicators'])
+          : null,
+      recommendations: json['recommendations'] != null
+          ? List<String>.from(json['recommendations'])
+          : null,
+      disclaimer: json['disclaimer'],
     );
   }
 
@@ -76,6 +116,17 @@ class FarmerProfile {
       'latestPrediction': latestPrediction?.toJson(),
       'profileImage': profileImage,
       'isFollowing': isFollowing,
+      'stressDetected': stressDetected,
+      'healthStatus': healthStatus,
+      'stressType': stressType,
+      'confidence': confidence,
+      'ndviMean': ndviMean,
+      'ndreMean': ndreMean,
+      'ndwiMean': ndwiMean,
+      'saviMean': saviMean,
+      'healthIndicators': healthIndicators,
+      'recommendations': recommendations,
+      'disclaimer': disclaimer,
     };
   }
 }

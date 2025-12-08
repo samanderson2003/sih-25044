@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../model/farmer_model.dart';
+import '../../services/sentinel_hub_service.dart';
 
 class ConnectionsController extends ChangeNotifier {
   GoogleMapController? _mapController;
@@ -15,11 +16,13 @@ class ConnectionsController extends ChangeNotifier {
   FarmerProfile? _currentUser;
   BitmapDescriptor? _farmerIcon;
   BitmapDescriptor? _myFarmIcon;
+  BitmapDescriptor? _diseaseIcon; // Red marker for diseased crops
   bool _isLoading = true;
   String? _error;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SentinelHubService _sentinelService = SentinelHubService();
 
   // Getters
   GoogleMapController? get mapController => _mapController;
@@ -70,7 +73,54 @@ class ConnectionsController extends ChangeNotifier {
     final Uint8List myFarmResizedData = myFarmByteData!.buffer.asUint8List();
     _myFarmIcon = BitmapDescriptor.fromBytes(myFarmResizedData);
 
+    // Create red disease marker icon
+    _diseaseIcon = await _createColoredMarker(Colors.red);
+
     _createMarkers(); // Create markers after icons are loaded
+  }
+
+  /// Create a colored marker icon programmatically
+  Future<BitmapDescriptor> _createColoredMarker(Color color) async {
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(pictureRecorder);
+    final paint = Paint()..color = color;
+
+    // Draw marker pin shape
+    const double markerSize = 80;
+    const double pinHeight = 100;
+
+    // Draw circle (top part of pin)
+    canvas.drawCircle(
+      const Offset(markerSize / 2, markerSize / 2),
+      markerSize / 2,
+      paint,
+    );
+
+    // Draw triangle (bottom pointer)
+    final path = Path();
+    path.moveTo(markerSize / 2, pinHeight);
+    path.lineTo(markerSize * 0.2, markerSize / 2);
+    path.lineTo(markerSize * 0.8, markerSize / 2);
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // Draw white border
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 4;
+    canvas.drawCircle(
+      const Offset(markerSize / 2, markerSize / 2),
+      markerSize / 2,
+      paint,
+    );
+    canvas.drawPath(path, paint);
+
+    final picture = pictureRecorder.endRecording();
+    final image = await picture.toImage(markerSize.toInt(), pinHeight.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.fromBytes(bytes);
   }
 
   void setMapController(GoogleMapController controller) {
@@ -224,6 +274,39 @@ class ConnectionsController extends ChangeNotifier {
           List<String> riskAlerts = _generateRiskAlerts(soilQuality);
           print('⚠️ Risk alerts: ${riskAlerts.length} alerts');
 
+          // Analyze satellite data for crop health monitoring
+          print('\n🛰️ CROP HEALTH ANALYSIS (Multi-Index):');
+          Map<String, dynamic>? healthAnalysis;
+          try {
+            healthAnalysis = await _sentinelService.analyzeVegetationHealth(
+              latitude: lat,
+              longitude: lng,
+              bufferKm: 0.5,
+            );
+            print('✅ Health analysis complete:');
+            print(
+              '   📊 NDVI: ${healthAnalysis['ndvi_mean']?.toStringAsFixed(3)} (Biomass)',
+            );
+            print(
+              '   🌿 NDRE: ${healthAnalysis['ndre_mean']?.toStringAsFixed(3)} (Chlorophyll)',
+            );
+            print(
+              '   💧 NDWI: ${healthAnalysis['ndwi_mean']?.toStringAsFixed(3)} (Water)',
+            );
+            print(
+              '   🌾 SAVI: ${healthAnalysis['savi_mean']?.toStringAsFixed(3)} (Soil-Adjusted)',
+            );
+            print('   Status: ${healthAnalysis['health_status']}');
+            print('   Stress Type: ${healthAnalysis['stress_type']}');
+            print('   Stress Detected: ${healthAnalysis['stress_detected']}');
+            print(
+              '   Confidence: ${(healthAnalysis['confidence'] * 100).toStringAsFixed(1)}%',
+            );
+          } catch (e) {
+            print('⚠️ Satellite analysis failed: $e');
+            healthAnalysis = null;
+          }
+
           // Create farmer profile
           print('\n✅ CREATING FARMER PROFILE...');
           final farmerProfile = FarmerProfile(
@@ -243,6 +326,21 @@ class ConnectionsController extends ChangeNotifier {
             latestPrediction: null,
             profileImage: data['profileImage'],
             isFollowing: false,
+            stressDetected: healthAnalysis?['stress_detected'],
+            healthStatus: healthAnalysis?['health_status'],
+            stressType: healthAnalysis?['stress_type'],
+            confidence: healthAnalysis?['confidence']?.toDouble(),
+            ndviMean: healthAnalysis?['ndvi_mean']?.toDouble(),
+            ndreMean: healthAnalysis?['ndre_mean']?.toDouble(),
+            ndwiMean: healthAnalysis?['ndwi_mean']?.toDouble(),
+            saviMean: healthAnalysis?['savi_mean']?.toDouble(),
+            healthIndicators: healthAnalysis?['indicators'] != null
+                ? List<String>.from(healthAnalysis!['indicators'])
+                : null,
+            recommendations: healthAnalysis?['recommendations'] != null
+                ? List<String>.from(healthAnalysis!['recommendations'])
+                : null,
+            disclaimer: healthAnalysis?['disclaimer'],
           );
 
           _farmers.add(farmerProfile);
@@ -342,7 +440,7 @@ class ConnectionsController extends ChangeNotifier {
   }
 
   void _createMarkers() {
-    if (_farmerIcon == null || _myFarmIcon == null) {
+    if (_farmerIcon == null || _myFarmIcon == null || _diseaseIcon == null) {
       print('⏳ Marker icons not loaded yet, waiting...');
       return;
     }
@@ -354,15 +452,49 @@ class ConnectionsController extends ChangeNotifier {
 
     _markers = _farmers.map((farmer) {
       final isCurrentUser = farmer.id == _currentUser?.id;
+      final hasStressDetected = farmer.stressDetected == true;
+
       print('📍 Creating marker for: ${farmer.name}');
       print('   Position: (${farmer.latitude}, ${farmer.longitude})');
       print('   Is current user: $isCurrentUser');
+      print('   Stress detected: $hasStressDetected');
+      print('   Stress type: ${farmer.stressType}');
+
+      // Choose marker icon based on crop health status
+      BitmapDescriptor markerIcon;
+      if (isCurrentUser) {
+        markerIcon = _myFarmIcon!;
+      } else if (hasStressDetected) {
+        markerIcon = _diseaseIcon!; // Red marker for stressed crops
+      } else {
+        markerIcon = _farmerIcon!; // Green marker for healthy crops
+      }
+
+      // Create snippet based on stress type
+      String snippet;
+      if (hasStressDetected) {
+        switch (farmer.stressType) {
+          case 'disease_or_pest':
+            snippet = '⚠️ Possible Disease/Pest - ${farmer.currentCrop}';
+            break;
+          case 'water_stress':
+            snippet = '💧 Water Stress - ${farmer.currentCrop}';
+            break;
+          case 'early_stress':
+            snippet = '🔍 Early Stress Signs - ${farmer.currentCrop}';
+            break;
+          default:
+            snippet = '⚠️ Vegetation Stress - ${farmer.currentCrop}';
+        }
+      } else {
+        snippet = farmer.currentCrop;
+      }
 
       return Marker(
         markerId: MarkerId(farmer.id),
         position: LatLng(farmer.latitude, farmer.longitude),
-        icon: isCurrentUser ? _myFarmIcon! : _farmerIcon!,
-        infoWindow: InfoWindow(title: farmer.name, snippet: farmer.currentCrop),
+        icon: markerIcon,
+        infoWindow: InfoWindow(title: farmer.name, snippet: snippet),
         onTap: () => selectFarmer(farmer),
       );
     }).toSet();
