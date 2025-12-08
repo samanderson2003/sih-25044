@@ -58,7 +58,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   timelines_plus: ^1.0.8
-  
+  firebase_storage: ^12.4.10
+  cached_network_image: ^3.4.1
+  file_picker: ^8.0.0
+  just_audio: ^0.9.38  
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
