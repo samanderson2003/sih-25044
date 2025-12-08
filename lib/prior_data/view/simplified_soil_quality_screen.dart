@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../model/farm_data_model.dart';
 import '../controller/soil_satellite_service.dart';
+import '../../services/soil_report_ocr_service.dart';
 
 /// Step 2: Soil Quality - Only 6 essential micronutrients for ML model
 /// Simplified from 16 fields to 6 critical nutrients
@@ -25,6 +28,7 @@ class _SimplifiedSoilQualityScreenState
     extends State<SimplifiedSoilQualityScreen> {
   final _formKey = GlobalKey<FormState>();
   final SoilSatelliteService _satelliteService = SoilSatelliteService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   // Only 6 micronutrients needed for ML model
   final _zincController = TextEditingController();
@@ -36,6 +40,8 @@ class _SimplifiedSoilQualityScreenState
 
   String _dataSource = 'manual';
   bool _skipSoilTest = false;
+  bool _isProcessingImage = false;
+  File? _uploadedImage;
 
   @override
   void initState() {
@@ -111,6 +117,232 @@ class _SimplifiedSoilQualityScreenState
         ),
       );
     }
+  }
+
+  /// Upload and process soil test report image
+  Future<void> _uploadLabReport(ImageSource source) async {
+    try {
+      // Check if API key is configured
+      if (!SoilReportOCRService.isConfigured()) {
+        if (!mounted) return;
+        _showApiKeyDialog();
+        return;
+      }
+
+      // Pick image
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() {
+        _isProcessingImage = true;
+        _uploadedImage = File(pickedFile.path);
+      });
+
+      if (!mounted) return;
+
+      // Show processing dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF2D5016)),
+              const SizedBox(height: 16),
+              const Text(
+                'Analyzing soil test report...',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Using AI to extract nutrient values',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Extract soil data from image
+      final extractedData = await SoilReportOCRService.extractSoilData(
+        File(pickedFile.path),
+      );
+
+      if (!mounted) return;
+
+      // Close processing dialog
+      Navigator.of(context).pop();
+
+      if (extractedData != null && extractedData.isNotEmpty) {
+        // Fill in the extracted values
+        setState(() {
+          if (extractedData.containsKey('zinc')) {
+            _zincController.text = extractedData['zinc']!.toStringAsFixed(1);
+          }
+          if (extractedData.containsKey('iron')) {
+            _ironController.text = extractedData['iron']!.toStringAsFixed(1);
+          }
+          if (extractedData.containsKey('copper')) {
+            _copperController.text = extractedData['copper']!.toStringAsFixed(
+              1,
+            );
+          }
+          if (extractedData.containsKey('manganese')) {
+            _manganeseController.text = extractedData['manganese']!
+                .toStringAsFixed(1);
+          }
+          if (extractedData.containsKey('boron')) {
+            _boronController.text = extractedData['boron']!.toStringAsFixed(1);
+          }
+          if (extractedData.containsKey('sulfur')) {
+            _sulfurController.text = extractedData['sulfur']!.toStringAsFixed(
+              2,
+            );
+          }
+          _dataSource = 'lab_report';
+          _isProcessingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '✅ Lab report analyzed! ${extractedData.length} nutrients extracted. Please verify values.',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade700,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        setState(() {
+          _isProcessingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '⚠️ Could not extract data from image. Please enter values manually.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isProcessingImage = false;
+      });
+
+      if (!mounted) return;
+
+      // Close processing dialog if open
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      String errorMessage = 'Error processing image';
+      if (e.toString().contains('API key')) {
+        errorMessage =
+            'Invalid API key. Please configure OpenAI API key in the app.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ $errorMessage'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// Show dialog to configure API key
+  void _showApiKeyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Key Required'),
+        content: const Text(
+          'To use AI-powered lab report extraction, you need to configure your OpenAI API key.\n\n'
+          '1. Get your API key from: https://platform.openai.com/api-keys\n'
+          '2. Open lib/services/soil_report_ocr_service.dart\n'
+          '3. Replace YOUR_OPENAI_API_KEY_HERE with your actual key\n\n'
+          'Alternatively, you can enter values manually or use satellite data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show image source selection dialog
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              'Upload Soil Test Report',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'AI will extract nutrient values automatically',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF2D5016)),
+              title: const Text('Take Photo'),
+              subtitle: const Text('Capture soil test report'),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadLabReport(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library,
+                color: Color(0xFF2D5016),
+              ),
+              title: const Text('Choose from Gallery'),
+              subtitle: const Text('Select existing image'),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadLabReport(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   void _saveData() {
@@ -236,6 +468,87 @@ class _SimplifiedSoilQualityScreenState
               ],
             ),
             const SizedBox(height: 12),
+
+            // Upload Lab Report Button (NEW)
+            ElevatedButton.icon(
+              onPressed: _isProcessingImage ? null : _showImageSourceDialog,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Upload Lab Report (AI Extract)'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D5016),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Show uploaded image preview
+            if (_uploadedImage != null) ...[
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: Image.file(
+                            _uploadedImage!,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _uploadedImage = null;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Lab report uploaded & processed',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             Card(
               shape: RoundedRectangleBorder(

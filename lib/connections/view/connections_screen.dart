@@ -45,6 +45,119 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               },
             ),
 
+            // Loading Indicator
+            Consumer<ConnectionsController>(
+              builder: (context, controller, _) {
+                if (!controller.isLoading) return const SizedBox.shrink();
+
+                return Container(
+                  color: Colors.black26,
+                  child: const Center(
+                    child: Card(
+                      margin: EdgeInsets.all(20),
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF2D5016),
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading farmers...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Error Display
+            Consumer<ConnectionsController>(
+              builder: (context, controller, _) {
+                if (controller.error == null) return const SizedBox.shrink();
+
+                return Positioned(
+                  top: MediaQuery.of(context).padding.top + 80,
+                  left: 16,
+                  right: 16,
+                  child: Card(
+                    color: Colors.red[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red[700]),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              controller.error!,
+                              style: TextStyle(color: Colors.red[900]),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed: controller.refreshFarmers,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Debug Info (Top-right corner)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 80,
+              right: 16,
+              child: Consumer<ConnectionsController>(
+                builder: (context, controller, _) {
+                  return Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '👥 ${controller.farmers.length} farmers',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '📍 ${controller.markers.length} markers',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          if (controller.currentUser != null)
+                            Text(
+                              '🏠 ${controller.currentUser!.name}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.green,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
             // Top Navigation Bar
             Positioned(
               top: 0,
@@ -153,21 +266,40 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               right: 16,
               child: Consumer<ConnectionsController>(
                 builder: (context, controller, _) {
-                  return FloatingActionButton(
-                    mini: true,
-                    backgroundColor: Colors.white,
-                    onPressed: () {
-                      if (controller.currentUser != null) {
-                        controller.moveToLocation(
-                          controller.currentUser!.latitude,
-                          controller.currentUser!.longitude,
-                        );
-                      }
-                    },
-                    child: const Icon(
-                      Icons.my_location,
-                      color: Color(0xFF2D5016),
-                    ),
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Refresh Button
+                      FloatingActionButton(
+                        mini: true,
+                        heroTag: 'refresh',
+                        backgroundColor: Colors.white,
+                        onPressed: controller.refreshFarmers,
+                        child: const Icon(
+                          Icons.refresh,
+                          color: Color(0xFF2D5016),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // My Location Button
+                      FloatingActionButton(
+                        mini: true,
+                        heroTag: 'location',
+                        backgroundColor: Colors.white,
+                        onPressed: () {
+                          if (controller.currentUser != null) {
+                            controller.moveToLocation(
+                              controller.currentUser!.latitude,
+                              controller.currentUser!.longitude,
+                            );
+                          }
+                        },
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Color(0xFF2D5016),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),

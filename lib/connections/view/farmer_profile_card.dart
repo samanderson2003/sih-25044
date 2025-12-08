@@ -178,6 +178,31 @@ class FarmerProfileCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildPredictionCard(farmer.latestPrediction!),
                     const SizedBox(height: 20),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.analytics_outlined,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TranslatedText(
+                              'No crop predictions available yet',
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
 
                   // Contact Section
