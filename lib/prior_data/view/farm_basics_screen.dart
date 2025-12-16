@@ -37,23 +37,13 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
   // Multiple crops selection
   final List<String> _selectedCrops = [];
 
-  // Common crops in India
+  // Available crops for selection
   final List<String> _availableCrops = [
     'Rice',
-    'Wheat',
     'Maize',
-    'Sugarcane',
-    'Cotton',
-    'Jowar',
-    'Bajra',
-    'Gram',
-    'Tur',
-    'Urad',
-    'Moong',
-    'Soybean',
-    'Groundnut',
-    'Sunflower',
-    'Rapeseed/Mustard',
+    'Finger Millet / Ragi',
+    'Wheat',
+    'Pulses',
   ];
 
   @override
@@ -63,7 +53,11 @@ class _FarmBasicsScreenState extends State<FarmBasicsScreen> {
       _location = widget.initialData!.location;
       _landSizeController.text = widget.initialData!.landSize.toString();
       _landSizeUnit = widget.initialData!.landSizeUnit;
-      _selectedCrops.addAll(widget.initialData!.crops);
+      // Only add crops that are in the available crops list
+      final validCrops = widget.initialData!.crops
+          .where((crop) => _availableCrops.contains(crop))
+          .toList();
+      _selectedCrops.addAll(validCrops);
       _updateDisplayAddress();
       _populateAddressFields();
     }

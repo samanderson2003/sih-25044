@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'crop_yield_prediction_screen.dart';
+import 'new_crop_yield_screen.dart';
 import '../../crop_diseases_detection/view/crop_detection_screen.dart';
 import '../../widgets/translated_text.dart';
 
@@ -80,10 +80,7 @@ class _PredictionWithDetectionScreenState
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                CropYieldPredictionScreen(),
-                CropDetectionScreen(),
-              ],
+              children: const [NewCropYieldScreen(), CropDetectionScreen()],
             ),
           ),
         ],

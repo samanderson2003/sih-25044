@@ -22,8 +22,9 @@ class _BotScreenState extends State<BotScreen> {
   late stt.SpeechToText _speechToText;
   bool _isListening = false;
   String _recognizedText = '';
-  String? _selectedImagePath; 
-  static const String _apiKey = 'Api key'; 
+  String? _selectedImagePath;
+  static const String _apiKey =
+      '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';
 
   static const String _systemPrompt = '''
 You are FarmBot, an intelligent agricultural assistant designed to help Indian farmers. 
@@ -89,14 +90,16 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
 
     // API Key Check
     if (_apiKey == 'YOUR_OPENAI_API_KEY_HERE' || _apiKey.isEmpty) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error: OpenAI API Key is missing. Please update _apiKey in bot_screen.dart.'),
+          content: Text(
+            'Error: OpenAI API Key is missing. Please update _apiKey in bot_screen.dart.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
       // Fallback response for missing key
-       setState(() {
+      setState(() {
         _messages.add(
           ChatMessage(
             text:
@@ -110,18 +113,18 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
       });
       _messageController.clear();
       _scrollToBottom();
-      return; 
+      return;
     }
-    
+
     // Determine the text to show in the bubble
     String messageText = message;
     if (message.isEmpty && isImageMessage) {
       messageText = 'Image attached. Please analyze this.';
     } else if (isImageMessage) {
       // Show user's query and note the image attachment
-      messageText = 'Image attached: ${currentImagePath!.split('/').last}\nQuery: "$message"';
+      messageText =
+          'Image attached: ${currentImagePath!.split('/').last}\nQuery: "$message"';
     }
-
 
     setState(() {
       _messages.add(
@@ -135,7 +138,8 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
       );
       _isLoading = true;
       _messageController.clear();
-      _selectedImagePath = null; // Clear the temporary path after adding to messages
+      _selectedImagePath =
+          null; // Clear the temporary path after adding to messages
     });
 
     _scrollToBottom();
@@ -183,7 +187,8 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
         // If image is attached, append voice to the current text
         if (_selectedImagePath != null) {
           // Append the recognized text to whatever the user has typed
-          _messageController.text = _messageController.text.trim() + ' ' + _recognizedText;
+          _messageController.text =
+              _messageController.text.trim() + ' ' + _recognizedText;
         } else {
           _messageController.text = _recognizedText;
         }
@@ -197,20 +202,20 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
           if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Microphone permission required. Please enable it in settings.'),
+                content: Text(
+                  'Microphone permission required. Please enable it in settings.',
+                ),
               ),
             );
             return;
           }
         }
-        
+
         bool available = await _speechToText.initialize(
           onError: (error) {
             print('Speech error: $error');
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Speech to text error: $error'),
-              ),
+              SnackBar(content: Text('Speech to text error: $error')),
             );
           },
           onStatus: (status) {
@@ -247,11 +252,9 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
         }
       } catch (e) {
         print('Voice listening error: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Voice input error: $e'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Voice input error: $e')));
       }
     }
   }
@@ -268,32 +271,39 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.camera_alt, color: Color(0xFF2D5016)),
+                  leading: const Icon(
+                    Icons.camera_alt,
+                    color: Color(0xFF2D5016),
+                  ),
                   title: const Text('Camera'),
                   onTap: () async {
                     Navigator.pop(context);
-                    final XFile? image =
-                        await ImagePicker().pickImage(source: ImageSource.camera);
+                    final XFile? image = await ImagePicker().pickImage(
+                      source: ImageSource.camera,
+                    );
                     if (image != null) {
                       _handleMediaSelection(image.path);
                     }
                   },
                 ),
                 ListTile(
-                  leading:
-                      const Icon(Icons.image, color: Color(0xFF2D5016)),
+                  leading: const Icon(Icons.image, color: Color(0xFF2D5016)),
                   title: const Text('Gallery'),
                   onTap: () async {
                     Navigator.pop(context);
-                    final XFile? image =
-                        await ImagePicker().pickImage(source: ImageSource.gallery);
+                    final XFile? image = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                    );
                     if (image != null) {
                       _handleMediaSelection(image.path);
                     }
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.file_present, color: Color(0xFF2D5016)),
+                  leading: const Icon(
+                    Icons.file_present,
+                    color: Color(0xFF2D5016),
+                  ),
                   title: const Text('File'),
                   onTap: () async {
                     Navigator.pop(context);
@@ -322,7 +332,9 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Image selected: ${filePath.split('/').last}. Type your query and press Send.'),
+        content: Text(
+          'Image selected: ${filePath.split('/').last}. Type your query and press Send.',
+        ),
       ),
     );
   }
@@ -339,27 +351,22 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
       if (fileName.endsWith('.webp')) imageMediaType = 'image/webp';
 
       final url = Uri.parse('https://api.openai.com/v1/chat/completions');
-      
+
       final List<Map<String, dynamic>> userContent = [
         {
           'type': 'image_url',
-          'image_url': {
-            'url': 'data:$imageMediaType;base64,$base64Image',
-          },
+          'image_url': {'url': 'data:$imageMediaType;base64,$base64Image'},
         },
       ];
-      
+
       // Determine the text prompt to send alongside the image
       String apiText = userText.trim();
       if (apiText.isEmpty) {
-        apiText = 'Please analyze this farming-related image and provide advice based on the system prompt.';
+        apiText =
+            'Please analyze this farming-related image and provide advice based on the system prompt.';
       }
 
-      userContent.add({
-        'type': 'text',
-        'text': apiText,
-      });
-
+      userContent.add({'type': 'text', 'text': apiText});
 
       final response = await http.post(
         url,
@@ -368,41 +375,39 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
           'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
-          'model': 'gpt-4o', 
+          'model': 'gpt-4o',
           'messages': [
-            {
-              'role': 'system',
-              'content': _systemPrompt,
-            },
-            {
-              'role': 'user',
-              'content': userContent,
-            },
+            {'role': 'system', 'content': _systemPrompt},
+            {'role': 'user', 'content': userContent},
           ],
           'max_tokens': 500,
           'temperature': 0.7,
         }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['choices'][0]['message']['content'].toString().trim();
       } else {
         print('Vision API Error: ${response.statusCode} - ${response.body}');
-        
+
         // Fallback to text model if vision model not available
-        return await _getAIResponse('User sent an image with query: $userText. Please ask them to describe what they see in the image and provide farming-related advice.');
+        return await _getAIResponse(
+          'User sent an image with query: $userText. Please ask them to describe what they see in the image and provide farming-related advice.',
+        );
       }
     } catch (e) {
       print('Error sending image to API: $e');
       // Fallback: send text message instead
-      return await _getAIResponse('User sent an image with query: $userText. Please ask them to describe what they see in the image and provide farming-related advice.');
+      return await _getAIResponse(
+        'User sent an image with query: $userText. Please ask them to describe what they see in the image and provide farming-related advice.',
+      );
     }
   }
 
   Future<String> _getAIResponse(String userMessage) async {
     final url = Uri.parse('https://api.openai.com/v1/chat/completions');
-    
+
     // Create conversation history for context, excluding image messages to prevent API errors
     final List<Map<String, dynamic>> contextMessages = _messages
         .where((msg) => !msg.isImage)
@@ -411,8 +416,9 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
             'role': msg.isUser ? 'user' : 'assistant',
             'content': msg.text,
           },
-        ).toList();
-    
+        )
+        .toList();
+
     final messages = [
       {'role': 'system', 'content': _systemPrompt},
       ...contextMessages,
@@ -592,8 +598,8 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
                       child: TextField(
                         controller: _messageController,
                         decoration: InputDecoration(
-                          hintText: _selectedImagePath != null 
-                              ? 'Image attached. Type your query...' 
+                          hintText: _selectedImagePath != null
+                              ? 'Image attached. Type your query...'
                               : 'Ask about farming...',
                           hintStyle: const TextStyle(color: Colors.grey),
                           border: InputBorder.none,
@@ -605,7 +611,10 @@ Respond in a friendly manner and use simple language. If asked in Hindi or other
                           prefixIcon: _selectedImagePath != null
                               ? Padding(
                                   padding: const EdgeInsets.only(left: 10),
-                                  child: Icon(Icons.photo_library, color: Color(0xFF2D5016).withOpacity(0.7)),
+                                  child: Icon(
+                                    Icons.photo_library,
+                                    color: Color(0xFF2D5016).withOpacity(0.7),
+                                  ),
                                 )
                               : null,
                         ),

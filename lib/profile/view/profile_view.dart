@@ -560,7 +560,7 @@ class _ProfileViewState extends State<ProfileView> {
             children: [
               Icon(icon, color: const Color(0xFF2D5016), size: 20),
               const SizedBox(width: 10),
-              Text(
+              TranslatedText(
                 title,
                 style: const TextStyle(
                   fontSize: 16,
@@ -792,7 +792,7 @@ class _ProfileViewState extends State<ProfileView> {
                       children: [
                         Icon(Icons.grid_on, color: Color(0xFF2D5016), size: 24),
                         SizedBox(width: 8),
-                        Text(
+                        TranslatedText(
                           'Farm Plot Layout',
                           style: TextStyle(
                             fontSize: 18,
@@ -827,7 +827,7 @@ class _ProfileViewState extends State<ProfileView> {
                         color: Colors.grey.shade300,
                       ),
                       const SizedBox(height: 12),
-                      Text(
+                      TranslatedText(
                         'No farm plot designed yet',
                         style: TextStyle(
                           color: Colors.grey.shade600,
@@ -835,7 +835,7 @@ class _ProfileViewState extends State<ProfileView> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      TranslatedText(
                         'Create a visual layout of your farm with crop assignments',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -847,7 +847,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ElevatedButton.icon(
                         onPressed: () => _openFarmPlotEditor(farmData),
                         icon: const Icon(Icons.add),
-                        label: const Text('Create Farm Plot'),
+                        label: const TranslatedText('Create Farm Plot'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2D5016),
                           foregroundColor: Colors.white,

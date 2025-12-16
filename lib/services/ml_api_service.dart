@@ -4,13 +4,13 @@ import 'package:http/http.dart' as http;
 
 class MLApiService {
   // Android Emulator: Use 10.0.2.2 (maps to host's localhost)
-  // Physical Device: Use your Mac's IP (e.g., 'http://192.168.1.10:5002')
-  // Find IP: System Settings > Network > Wi-Fi > Details
-  // Port 5002 for Crop Yield API (port 5000 conflicts with macOS AirPlay)
-  static const String baseUrl = 'http://192.168.5.102:5002'; // Crop Yield API
+  // Physical Device: Use your Mac's IP with ML server port 8000
+  // ML Server runs on: http://192.168.137.33:8000
+  static const String baseUrl =
+      'http://192.168.137.33:8000'; // Crop Yield ML API
 
   // For Android emulator testing, use:
-  // static const String baseUrl = 'http://10.0.2.2:5002';
+  // static const String baseUrl = 'http://10.0.2.2:8000';
 
   /// Check if API server is running
   static Future<bool> checkHealth() async {
@@ -69,9 +69,9 @@ class MLApiService {
     try {
       final response = await http
           .post(
-            Uri.parse('$baseUrl/api/predict-yield'),
+            Uri.parse('$baseUrl/predict'), // FastAPI endpoint
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({'farm_data': farmData}),
+            body: json.encode(farmData), // Send farmData directly, not wrapped
           )
           .timeout(const Duration(seconds: 10));
 
@@ -117,6 +117,36 @@ class MLApiService {
       }
     } catch (e) {
       print('❌ Comprehensive Plan Request Failed: $e');
+      return null;
+    }
+  }
+
+  /// NEW: Get AI-powered recommendations from Neural Network GEE API
+  /// This connects to the predict.py model via FastAPI (app.py)
+  static Future<Map<String, dynamic>?> getAgriAIRecommendations({
+    required Map<String, dynamic> farmInput,
+  }) async {
+    try {
+      print('📡 Calling Agri-AI API with input: $farmInput');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/predict'), // FastAPI endpoint from app.py
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(farmInput),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ Agri-AI Response: ${data['status']}');
+        return data;
+      } else {
+        print('❌ Agri-AI Error: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Agri-AI Request Failed: $e');
       return null;
     }
   }

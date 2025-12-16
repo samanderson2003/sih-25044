@@ -15,20 +15,21 @@ class WeatherIndicator extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: const Color(0xFF2D5016).withOpacity(0.1),
-          width: 1,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFFFFFDE7), const Color(0xFFF1F8E9)],
         ),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
+            color: const Color(0xFF4CAF50).withOpacity(0.08),
+            blurRadius: 20,
             offset: const Offset(0, 4),
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -45,19 +46,21 @@ class WeatherIndicator extends StatelessWidget {
                   Text(
                     '${weather!.temperature.toStringAsFixed(0)}°',
                     style: const TextStyle(
-                      color: Color(0xFF1565C0),
-                      fontSize: 48,
+                      color: Color(0xFF2D5016),
+                      fontSize: 52,
                       fontWeight: FontWeight.w300,
                       height: 1.0,
+                      letterSpacing: -2,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   TranslatedText(
                     weather!.location,
-                    style: const TextStyle(
-                      color: Color(0xFF64B5F6),
-                      fontSize: 12,
+                    style: TextStyle(
+                      color: const Color(0xFF2D5016).withOpacity(0.6),
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ],
@@ -96,47 +99,47 @@ class WeatherIndicator extends StatelessWidget {
 
   Widget _buildWeatherDetailCard(IconData icon, Widget label, String value) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xFFBBDEFB).withOpacity(0.3), width: 1),
+        color: const Color(0xFF2D5016).withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF2D5016).withOpacity(0.12),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF90CAF9).withOpacity(0.3),
-                  Color(0xFFE3F2FD).withOpacity(0.3),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xFF2D5016).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20, color: const Color(0xFF1976D2)),
+            child: Icon(icon, size: 18, color: const Color(0xFF2D5016)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DefaultTextStyle(
-                  style: const TextStyle(
-                    color: Color(0xFF64B5F6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                  style: TextStyle(
+                    color: const Color(0xFF2D5016).withOpacity(0.5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
                   child: label,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: const TextStyle(
-                    color: Color(0xFF1565C0),
-                    fontSize: 15,
+                    color: Color(0xFF2D5016),
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ],

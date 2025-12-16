@@ -1,7 +1,9 @@
-// daily_actions_screen.dart - Show ML-powered daily recommendations
+// daily_actions_screen.dart - Show AI-powered daily recommendations
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../services/ml_api_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:lottie/lottie.dart';
 import '../../../widgets/translated_text.dart';
 
 class DailyActionsScreen extends StatefulWidget {
@@ -23,6 +25,9 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   Map<String, dynamic>? _planData;
   String? _error;
 
+  static const String _openAIKey =
+      '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';
+
   @override
   void initState() {
     super.initState();
@@ -36,84 +41,131 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
     });
 
     try {
-      // Check if API is available
-      final isHealthy = await MLApiService.checkHealth();
-      if (!isHealthy) {
-        setState(() {
-          _error = 'ML API Server not available. Please start the server.';
-          _isLoading = false;
-        });
-        return;
-      }
+      final formattedDate = DateFormat(
+        'EEEE, MMMM d, yyyy',
+      ).format(widget.selectedDate);
+      final dayOfYear =
+          widget.selectedDate
+              .difference(DateTime(widget.selectedDate.year, 1, 1))
+              .inDays +
+          1;
+      final season = _getSeason(widget.selectedDate.month);
 
-      // Get comprehensive plan
-      final plan = await MLApiService.getComprehensivePlan(
-        farmData: widget.farmData,
-        targetDate: DateFormat('yyyy-MM-dd').format(widget.selectedDate),
+      final prompt =
+          '''
+You are an agricultural expert for Odisha, India. Provide daily farming recommendations for:
+
+Date: $formattedDate (Day $dayOfYear of ${widget.selectedDate.year})
+Season: $season
+Farm Location: ${widget.farmData['district'] ?? 'Odisha'}
+
+Provide practical, actionable advice for this specific day. Return ONLY valid JSON (no markdown):
+
+{
+  "morning_tasks": [
+    {
+      "task": "Task name",
+      "description": "2-3 sentences on what to do",
+      "priority": "High/Medium/Low",
+      "duration": "30 mins"
+    }
+  ],
+  "afternoon_tasks": [
+    {
+      "task": "Task name",
+      "description": "What to do and why",
+      "priority": "High/Medium/Low",
+      "duration": "1 hour"
+    }
+  ],
+  "evening_tasks": [
+    {
+      "task": "Task name", 
+      "description": "Evening activities",
+      "priority": "High/Medium/Low",
+      "duration": "45 mins"
+    }
+  ],
+  "weather_advice": "Weather-specific advice for today",
+  "crop_care_tip": "One specific crop care tip for this date",
+  "important_reminder": "Critical reminder for farmers today"
+}
+
+Focus on:
+- Season-appropriate activities for $season
+- Weather considerations for Odisha in ${DateFormat('MMMM').format(widget.selectedDate)}
+- Practical tasks farmers can do today
+- Keep descriptions simple and farmer-friendly
+''';
+
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_openAIKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'messages': [
+            {
+              'role': 'system',
+              'content':
+                  'You are an agricultural expert for Odisha, India. Provide practical farming advice. Return ONLY valid JSON, no markdown or extra text.',
+            },
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.7,
+          'max_tokens': 1500,
+        }),
       );
 
-      if (plan == null || !plan['success']) {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        String content = data['choices'][0]['message']['content'].trim();
+
+        // Remove markdown if present
+        content = content
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .trim();
+
+        final planData = jsonDecode(content);
+
         setState(() {
-          _error = 'Failed to get recommendations';
+          _planData = planData;
           _isLoading = false;
         });
-        return;
+      } else {
+        setState(() {
+          _error = 'Failed to get AI recommendations: ${response.statusCode}';
+          _isLoading = false;
+        });
       }
-
-      setState(() {
-        _planData = plan;
-        _isLoading = false;
-      });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = 'Error: $e';
         _isLoading = false;
       });
     }
+  }
+
+  String _getSeason(int month) {
+    if (month >= 3 && month <= 5) return 'Summer (Pre-Monsoon)';
+    if (month >= 6 && month <= 9) return 'Monsoon (Rainy Season)';
+    if (month >= 10 && month <= 11) return 'Post-Monsoon (Autumn)';
+    return 'Winter';
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
-      case 'critical':
-        return Colors.red;
       case 'high':
-        return Colors.orange;
+        return Colors.red.shade600;
       case 'medium':
-        return Colors.blue;
+        return Colors.orange.shade600;
+      case 'low':
+        return Colors.green.shade600;
       default:
-        return Colors.grey;
-    }
-  }
-
-  Color _getSeverityColor(String severity) {
-    switch (severity.toLowerCase()) {
-      case 'critical':
-        return const Color(0xFFE74C3C);
-      case 'high':
-        return const Color(0xFFF39C12);
-      case 'medium':
-        return const Color(0xFF3498DB);
-      default:
-        return const Color(0xFF95A5A6);
-    }
-  }
-
-  IconData _getAlertIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'fertilizer':
-        return Icons.grass;
-      case 'irrigation':
-        return Icons.water_drop;
-      case 'weather':
-        return Icons.cloud;
-      case 'disease':
-        return Icons.bug_report;
-      case 'soil':
-        return Icons.terrain;
-      case 'harvest':
-        return Icons.agriculture;
-      default:
-        return Icons.info;
+        return Colors.grey.shade600;
     }
   }
 
@@ -127,7 +179,19 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
         backgroundColor: const Color(0xFF27AE60),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Lottie.asset('assets/loading.json', width: 150, height: 150),
+                  const SizedBox(height: 16),
+                  TranslatedText(
+                    'Getting your daily recommendations...',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ],
+              ),
+            )
           : _error != null
           ? _buildErrorView()
           : _buildPlanView(),
@@ -154,55 +218,18 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            if (_error!.contains('API Server'))
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade700),
-                        const SizedBox(width: 8),
-                        TranslatedText(
-                          'Start API Server',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const TranslatedText('Open terminal and run:'),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'cd engine/api\npython app.py',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          color: Colors.greenAccent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _loadPlan,
               icon: const Icon(Icons.refresh),
               label: const TranslatedText('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF27AE60),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -211,48 +238,77 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   }
 
   Widget _buildPlanView() {
-    final dailyPlan = _planData!['daily_plan'];
-    final yieldForecast = _planData!['yield_forecast'];
-    final cropStage = dailyPlan['crop_stage'];
-    final actions = dailyPlan['actions'] as List;
-    final alerts = dailyPlan['alerts'] as List;
-    final daysToHarvest = dailyPlan['days_to_harvest'];
+    if (_planData == null) return const SizedBox.shrink();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Crop Stage Card
-          _buildStageCard(cropStage, daysToHarvest),
+          // Date Header Card
+          _buildDateHeaderCard(),
           const SizedBox(height: 16),
 
-          // Alerts Section
-          if (alerts.isNotEmpty) ...[
-            _buildSectionTitle('🚨 Alerts & Warnings'),
-            const SizedBox(height: 8),
-            ...alerts.map((alert) => _buildAlertCard(alert)).toList(),
+          // Important Reminder Card
+          if (_planData!['important_reminder'] != null)
+            _buildReminderCard(_planData!['important_reminder']),
+          if (_planData!['important_reminder'] != null)
             const SizedBox(height: 16),
-          ],
 
-          // Today's Tasks
-          _buildSectionTitle('📋 Today\'s Tasks'),
-          const SizedBox(height: 8),
-          ...actions.map((action) => _buildActionCard(action)).toList(),
+          // Morning Tasks
+          _buildTaskSection(
+            'Morning Tasks',
+            _planData!['morning_tasks'] ?? [],
+            Icons.wb_sunny,
+            Colors.orange.shade600,
+          ),
           const SizedBox(height: 16),
 
-          // Yield Forecast
-          _buildYieldForecastCard(yieldForecast),
+          // Afternoon Tasks
+          _buildTaskSection(
+            'Afternoon Tasks',
+            _planData!['afternoon_tasks'] ?? [],
+            Icons.wb_sunny_outlined,
+            Colors.amber.shade700,
+          ),
           const SizedBox(height: 16),
 
-          // Model Info
-          _buildModelInfoCard(),
+          // Evening Tasks
+          _buildTaskSection(
+            'Evening Tasks',
+            _planData!['evening_tasks'] ?? [],
+            Icons.nightlight_round,
+            Colors.indigo.shade600,
+          ),
+          const SizedBox(height: 16),
+
+          // Weather Advice
+          if (_planData!['weather_advice'] != null)
+            _buildInfoCard(
+              'Weather Advice',
+              _planData!['weather_advice'],
+              Icons.cloud,
+              Colors.blue.shade600,
+            ),
+          if (_planData!['weather_advice'] != null) const SizedBox(height: 12),
+
+          // Crop Care Tip
+          if (_planData!['crop_care_tip'] != null)
+            _buildInfoCard(
+              'Crop Care Tip',
+              _planData!['crop_care_tip'],
+              Icons.eco,
+              Colors.green.shade600,
+            ),
+
+          const SizedBox(height: 16),
+          _buildAIPoweredBadge(),
         ],
       ),
     );
   }
 
-  Widget _buildStageCard(Map<String, dynamic> stage, int daysToHarvest) {
+  Widget _buildDateHeaderCard() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -271,14 +327,14 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.eco, color: Colors.white, size: 28),
+                const Icon(Icons.calendar_today, color: Colors.white, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TranslatedText(
-                        stage['stage'],
+                        DateFormat('EEEE, MMMM d').format(widget.selectedDate),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -287,7 +343,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                       ),
                       const SizedBox(height: 4),
                       TranslatedText(
-                        'Day ${stage['days']} since planting',
+                        _getSeason(widget.selectedDate.month),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white70,
@@ -298,77 +354,48 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TranslatedText(
-                      stage['description'],
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (daysToHarvest > 0) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  TranslatedText(
-                    '$daysToHarvest days to harvest',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAlertCard(Map<String, dynamic> alert) {
-    final severity = alert['severity'] ?? 'medium';
-    final type = alert['type'] ?? 'info';
-
+  Widget _buildReminderCard(String reminder) {
     return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: _getSeverityColor(severity), width: 2),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.red.shade300, width: 2),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _getAlertIcon(type),
-              color: _getSeverityColor(severity),
-              size: 24,
-            ),
+            Icon(Icons.priority_high, color: Colors.red.shade700, size: 28),
             const SizedBox(width: 12),
             Expanded(
-              child: TranslatedText(
-                alert['message'],
-                style: const TextStyle(fontSize: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TranslatedText(
+                    'Important Reminder',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TranslatedText(
+                    reminder,
+                    style: TextStyle(fontSize: 14, color: Colors.red.shade800),
+                  ),
+                ],
               ),
             ),
           ],
@@ -377,8 +404,38 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
     );
   }
 
-  Widget _buildActionCard(Map<String, dynamic> action) {
-    final priority = action['priority'] ?? 'medium';
+  Widget _buildTaskSection(
+    String title,
+    List<dynamic> tasks,
+    IconData icon,
+    Color color,
+  ) {
+    if (tasks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 8),
+            TranslatedText(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...tasks.map((task) => _buildTaskCard(task)).toList(),
+      ],
+    );
+  }
+
+  Widget _buildTaskCard(Map<String, dynamic> task) {
+    final priority = task['priority'] ?? 'Medium';
+    final taskName = task['task'] ?? 'Task';
+    final description = task['description'] ?? '';
+    final duration = task['duration'] ?? '';
 
     return Card(
       elevation: 1,
@@ -412,7 +469,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TranslatedText(
-                    action['task'],
+                    taskName,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -421,87 +478,76 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            TranslatedText(
-              action['description'],
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  action['timing'],
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    fontStyle: FontStyle.italic,
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              TranslatedText(
+                description,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+            ],
+            if (duration.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    duration,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildYieldForecastCard(Map<String, dynamic> forecast) {
-    if (forecast['error'] != null) return const SizedBox.shrink();
-
-    final economics = forecast['economics'];
-
+  Widget _buildInfoCard(
+    String title,
+    String content,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
-      elevation: 2,
+      elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.trending_up,
-                  color: Color(0xFF27AE60),
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                const TranslatedText(
-                  'Expected Yield & Profit',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildYieldRow(
-              'Total Yield',
-              '${forecast['total_yield_tonnes']} tonnes (${forecast['total_yield_kg']} kg)',
-            ),
-            _buildYieldRow(
-              'Per Hectare',
-              '${forecast['yield_per_hectare']} tonnes/ha',
-            ),
-            _buildYieldRow('Confidence', '${forecast['confidence']}%'),
-            const Divider(height: 24),
-            _buildYieldRow(
-              'Expected Income',
-              '₹${economics['gross_income_low']} - ₹${economics['gross_income_high']}',
-              valueColor: const Color(0xFF27AE60),
-            ),
-            _buildYieldRow('Production Cost', '₹${economics['total_cost']}'),
-            _buildYieldRow(
-              'Net Profit',
-              '₹${economics['net_profit_low']} - ₹${economics['net_profit_high']}',
-              valueColor: const Color(0xFF27AE60),
-              bold: true,
-            ),
-            _buildYieldRow(
-              'ROI',
-              '${economics['roi_low']}% - ${economics['roi_high']}%',
-              valueColor: const Color(0xFF27AE60),
-              bold: true,
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TranslatedText(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TranslatedText(
+                    content,
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -509,35 +555,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
     );
   }
 
-  Widget _buildYieldRow(
-    String label,
-    String value, {
-    Color? valueColor,
-    bool bold = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TranslatedText(
-            label,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          TranslatedText(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              color: valueColor ?? Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModelInfoCard() {
+  Widget _buildAIPoweredBadge() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -554,7 +572,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TranslatedText(
-                  'Powered by AI',
+                  'Powered by OpenAI',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade900,
@@ -562,7 +580,7 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'XGBoost ML Model (R²=0.71) with NASA Climate Data',
+                  'GPT-4o-mini with Odisha farming expertise',
                   style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
                 ),
               ],
@@ -570,13 +588,6 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return TranslatedText(
-      title,
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
     );
   }
 }

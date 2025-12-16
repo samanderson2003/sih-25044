@@ -4,6 +4,7 @@ import '../model/weather_model.dart';
 import '../model/daily_action_model.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
 import '../../prior_data/controller/climate_service.dart';
+import '../service/crop_lifecycle_service.dart';
 
 class HomeController extends ChangeNotifier {
   final FarmDataController _farmDataController = FarmDataController();
@@ -71,57 +72,93 @@ class HomeController extends ChangeNotifier {
           _userState,
         );
 
-        _loadUserCrops(farmData.farmBasics.crops);
+        // Load first crop (blocks loading), then load rest in background
+        _loadUserCropsProgressive(farmData.farmBasics.crops);
       } else {
-        _loadDefaultCrops();
+        await _loadDefaultCrops();
         _loadWeather();
+        _isLoadingCrops = false;
+        notifyListeners();
       }
     } catch (e) {
       print('Error loading farm data: $e');
-      _loadDefaultCrops();
+      await _loadDefaultCrops();
       _loadWeather();
+      _isLoadingCrops = false;
+      notifyListeners();
     }
-
-    _isLoadingCrops = false;
-    notifyListeners();
   }
 
-  void _loadUserCrops(List<String> userCropNames) {
+  void _loadUserCropsProgressive(List<String> userCropNames) async {
     _crops.clear();
-    for (final cropName in userCropNames) {
-      Crop? crop;
-      switch (cropName.toLowerCase()) {
-        case 'rice':
-          crop = _createRiceCrop();
-          break;
-        case 'wheat':
-          crop = _createWheatCrop();
-          break;
-        case 'maize':
-          crop = _createMaizeCrop();
-          break;
-        case 'cotton':
-          crop = _createCottonCrop();
-          break;
-      }
+
+    if (userCropNames.isEmpty) {
+      await _loadDefaultCrops();
+      _isLoadingCrops = false;
+      notifyListeners();
+      return;
+    }
+
+    // Load FIRST crop and show immediately
+    final firstCropName = userCropNames[0];
+    final firstCrop = await _createCropByName(firstCropName);
+    if (firstCrop != null) {
+      _crops.add(firstCrop);
+      _selectedCrop = firstCrop;
+
+      // Stop loading state after first crop is ready
+      _isLoadingCrops = false;
+      notifyListeners(); // Show first crop immediately and hide loading
+
+      // Load remaining crops in background (don't await)
+      _loadRemainingCropsInBackground(userCropNames);
+    } else {
+      // First crop failed, try defaults
+      await _loadDefaultCrops();
+      _isLoadingCrops = false;
+      notifyListeners();
+    }
+  }
+
+  void _loadRemainingCropsInBackground(List<String> userCropNames) async {
+    // Load crops 2, 3, 4... without blocking UI
+    for (int i = 1; i < userCropNames.length; i++) {
+      final cropName = userCropNames[i];
+      final crop = await _createCropByName(cropName);
       if (crop != null) {
         _crops.add(crop);
+        notifyListeners(); // Update UI as each crop loads
       }
-    }
-    if (_crops.isEmpty) {
-      _loadDefaultCrops();
-    }
-    if (_crops.isNotEmpty) {
-      _selectedCrop = _crops[0];
     }
   }
 
-  void _loadDefaultCrops() {
+  Future<Crop?> _createCropByName(String cropName) async {
+    switch (cropName.toLowerCase()) {
+      case 'rice':
+        return await _createRiceCrop();
+      case 'wheat':
+        return await _createWheatCrop();
+      case 'maize':
+        return await _createMaizeCrop();
+      case 'cotton':
+        return await _createCottonCrop();
+      case 'finger millet / ragi':
+      case 'finger millet':
+      case 'ragi':
+        return await _createRagiCrop();
+      case 'pulses':
+        return await _createPulsesCrop();
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _loadDefaultCrops() async {
     _crops = [
-      _createRiceCrop(),
-      _createWheatCrop(),
-      _createMaizeCrop(),
-      _createCottonCrop(),
+      await _createRiceCrop(),
+      await _createWheatCrop(),
+      await _createMaizeCrop(),
+      await _createCottonCrop(),
     ];
     if (_crops.isNotEmpty) {
       _selectedCrop = _crops[0];
@@ -334,9 +371,114 @@ class HomeController extends ChangeNotifier {
     await _loadWeather();
   }
 
+  // Helper method to generate lifecycle with AI or fallback to static data
+  Future<List<CropStage>> _getLifecycleStages({
+    required String cropName,
+    required List<CropStage> fallbackStages,
+  }) async {
+    try {
+      // Try to generate AI-powered lifecycle
+      final generatedStages = await CropLifecycleService.getCachedLifecycle(
+        cropName: cropName,
+        soilType: _userState,
+        climate: _userState,
+        location: _userState,
+      );
+
+      if (generatedStages != null && generatedStages.length >= 8) {
+        debugPrint('✅ Using AI-generated lifecycle for $cropName');
+        return generatedStages;
+      } else if (generatedStages != null && generatedStages.isNotEmpty) {
+        debugPrint(
+          '⚠️ AI generated only ${generatedStages.length} stages (expected 8), using fallback',
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to generate AI lifecycle: $e');
+    }
+
+    // Fallback to static data
+    debugPrint('📋 Using static lifecycle for $cropName');
+    return fallbackStages;
+  }
+
   // --- CROP CREATION METHODS UPDATED WITH DAY-WISE DATA ---
 
-  Crop _createRiceCrop() {
+  Future<Crop> _createRiceCrop() async {
+    // Static fallback stages
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: -15,
+        stageName: 'Land Preparation',
+        actionTitle: 'Plow and Level Field',
+        description:
+            'Plow field to 15-20 cm depth using tractor. Level properly for uniform water distribution. Apply 10-12 tonnes/hectare of well-decomposed FYM (Farmyard Manure) or 5 tonnes/ha of compost.',
+        icon: 'agriculture',
+      ),
+      CropStage(
+        daysAfterPlanting: -3,
+        stageName: 'Seed Selection & Treatment',
+        actionTitle: 'Treat Seeds',
+        description:
+            'Select certified seeds with 85% germination, 35-40 kg/ha seed rate. Treat with Carbendazim @ 2g/kg seed or Trichoderma viride @ 4g/kg for organic method.',
+        icon: 'science',
+      ),
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing/Transplanting',
+        actionTitle: 'Transplant Seedlings',
+        description:
+            'Transplant 21-25 day old seedlings at 20×15 cm spacing. Use 2-3 seedlings per hill. Maintain 5 cm water depth during transplanting.',
+        icon: 'water_drop',
+      ),
+      CropStage(
+        daysAfterPlanting: 15,
+        stageName: 'Irrigation Management',
+        actionTitle: 'Maintain Water Level',
+        description:
+            'Maintain 5-7 cm standing water depth. Apply 50-60 mm irrigation when depleted. Total water requirement: 1200-1500 mm. Drain 10 days before harvest.',
+        icon: 'water_drop',
+      ),
+      CropStage(
+        daysAfterPlanting: 30,
+        stageName: 'Intercultural Operations',
+        actionTitle: 'Weeding & Fertilization',
+        description:
+            'Apply 60 kg/ha Urea (27 kg N/ha) at 20-25 DAS. Second dose 60 kg/ha at 40-45 DAS. Spray Pretilachlor @ 500g/ha for weeds. Apply 50 kg/ha Potash.',
+        icon: 'eco',
+      ),
+      CropStage(
+        daysAfterPlanting: 60,
+        stageName: 'Plant Protection',
+        actionTitle: 'Pest & Disease Control',
+        description:
+            'Use 8 pheromone traps/ha for monitoring. Spray Chlorantraniliprole @ 0.4 ml/liter or Cartap Hydrochloride @ 2g/liter. For blast, apply Tricyclazole @ 0.6g/liter.',
+        icon: 'pest_control',
+      ),
+      CropStage(
+        daysAfterPlanting: 100,
+        stageName: 'Harvesting',
+        actionTitle: 'Harvest Mature Crop',
+        description:
+            'Harvest at 80-85% grain maturity and 20-25% moisture. Expected yield: 5-6 tonnes/ha. Use combine harvester or sickle. Leave 15 cm stubble.',
+        icon: 'agriculture',
+      ),
+      CropStage(
+        daysAfterPlanting: 105,
+        stageName: 'Post-Harvest Processing',
+        actionTitle: 'Threshing & Storage',
+        description:
+            'Thresh within 24-48 hours. Sun-dry to 12-14% moisture (2-3 days). Store in 50-60 kg gunny bags. Fumigate with Aluminium Phosphide @ 2 tablets/tonne.',
+        icon: 'verified',
+      ),
+    ];
+
+    // Get AI-generated or fallback lifecycle
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Rice',
+      fallbackStages: fallbackStages,
+    );
+
     return Crop(
       id: 'rice',
       name: 'Rice',
@@ -380,63 +522,41 @@ class HomeController extends ChangeNotifier {
           ),
         ],
       },
-      // NEW: Day-wise logic
-      lifecycleStages: [
-        CropStage(
-          daysAfterPlanting: 1,
-          stageName: 'Sowing',
-          actionTitle: 'Sowing Seeds',
-          description: 'Plant seeds at 2-3 cm depth. Ensure soil is moist.',
-          icon: Icons.water_drop,
-        ),
-        CropStage(
-          daysAfterPlanting: 5,
-          stageName: 'Germination',
-          actionTitle: 'Check Sprouting',
-          description:
-              'Seeds should start sprouting. Maintain light irrigation.',
-          icon: Icons.eco,
-        ),
-        CropStage(
-          daysAfterPlanting: 12,
-          stageName: 'Seedling',
-          actionTitle: 'First Fertilization',
-          description: 'Apply basal dose of Nitrogen. Look for early weeds.',
-          icon: Icons.science,
-        ),
-        CropStage(
-          daysAfterPlanting: 25,
-          stageName: 'Tillering',
-          actionTitle: 'Transplanting',
-          description: 'Move seedlings to main field if using nursery method.',
-          icon: Icons.move_down,
-        ),
-        CropStage(
-          daysAfterPlanting: 45,
-          stageName: 'Vegetative',
-          actionTitle: 'Water Level',
-          description: 'Maintain 5cm water level. Check for stem borers.',
-          icon: Icons.water,
-        ),
-        CropStage(
-          daysAfterPlanting: 60,
-          stageName: 'Flowering',
-          actionTitle: 'Pest Control',
-          description: 'Apply preventative spray for leaf folders.',
-          icon: Icons.bug_report,
-        ),
-        CropStage(
-          daysAfterPlanting: 90,
-          stageName: 'Maturity',
-          actionTitle: 'Stop Irrigation',
-          description: 'Drain water 10 days before harvest.',
-          icon: Icons.wb_sunny,
-        ),
-      ],
+      // Dynamic or fallback lifecycle
+      lifecycleStages: lifecycleStages,
     );
   }
 
-  Crop _createWheatCrop() {
+  Future<Crop> _createWheatCrop() async {
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing',
+        actionTitle: 'Sowing',
+        description: 'Sow seeds 4-5cm deep in rows.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 21,
+        stageName: 'CRI Stage',
+        actionTitle: 'First Irrigation',
+        description: 'Critical Crown Root Initiation irrigation.',
+        icon: 'water_drop',
+      ),
+      CropStage(
+        daysAfterPlanting: 45,
+        stageName: 'Tillering',
+        actionTitle: 'Nitrogen Application',
+        description: 'Apply remaining dose of Urea.',
+        icon: 'science',
+      ),
+    ];
+
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Wheat',
+      fallbackStages: fallbackStages,
+    );
+
     return Crop(
       id: 'wheat',
       name: 'Wheat',
@@ -457,33 +577,33 @@ class HomeController extends ChangeNotifier {
         12: SeasonSuitability.highCompatibility,
       },
       monthlyTasks: {},
-      lifecycleStages: [
-        CropStage(
-          daysAfterPlanting: 1,
-          stageName: 'Sowing',
-          actionTitle: 'Sowing',
-          description: 'Sow seeds 4-5cm deep in rows.',
-          icon: Icons.grass,
-        ),
-        CropStage(
-          daysAfterPlanting: 21,
-          stageName: 'CRI Stage',
-          actionTitle: 'First Irrigation',
-          description: 'Critical Crown Root Initiation irrigation.',
-          icon: Icons.water_drop,
-        ),
-        CropStage(
-          daysAfterPlanting: 45,
-          stageName: 'Tillering',
-          actionTitle: 'Nitrogen Application',
-          description: 'Apply remaining dose of Urea.',
-          icon: Icons.science,
-        ),
-      ],
+      lifecycleStages: lifecycleStages,
     );
   }
 
-  Crop _createMaizeCrop() {
+  Future<Crop> _createMaizeCrop() async {
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing',
+        actionTitle: 'Planting',
+        description: 'Plant on ridges. Apply basal fertilizer.',
+        icon: 'agriculture',
+      ),
+      CropStage(
+        daysAfterPlanting: 15,
+        stageName: 'Seedling',
+        actionTitle: 'Weeding',
+        description: 'Keep field weed-free during early growth.',
+        icon: 'grass',
+      ),
+    ];
+
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Maize',
+      fallbackStages: fallbackStages,
+    );
+
     return Crop(
       id: 'maize',
       name: 'Maize',
@@ -504,26 +624,83 @@ class HomeController extends ChangeNotifier {
         12: SeasonSuitability.notRecommended,
       },
       monthlyTasks: {},
-      lifecycleStages: [
-        CropStage(
-          daysAfterPlanting: 1,
-          stageName: 'Sowing',
-          actionTitle: 'Planting',
-          description: 'Plant on ridges. Apply basal fertilizer.',
-          icon: Icons.agriculture,
-        ),
-        CropStage(
-          daysAfterPlanting: 15,
-          stageName: 'Seedling',
-          actionTitle: 'Weeding',
-          description: 'Keep field weed-free during early growth.',
-          icon: Icons.cut,
-        ),
-      ],
+      lifecycleStages: lifecycleStages,
     );
   }
 
-  Crop _createCottonCrop() {
+  Future<Crop> _createCottonCrop() async {
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: -10,
+        stageName: 'Land Preparation',
+        actionTitle: 'Prepare Field',
+        description:
+            'Plow to 20-25 cm depth. Form ridges at 60-90 cm spacing. Apply 8-10 tonnes/ha FYM or 4-5 tonnes/ha vermicompost. Level properly for drainage.',
+        icon: 'agriculture',
+      ),
+      CropStage(
+        daysAfterPlanting: -2,
+        stageName: 'Seed Selection & Treatment',
+        actionTitle: 'Treat Seeds',
+        description:
+            'Use certified Bt-cotton seeds, 1.5-2 kg/ha seed rate. Treat with Imidacloprid @ 7 ml/kg and Carbendazim @ 2g/kg. Ensure 70% germination.',
+        icon: 'science',
+      ),
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing/Transplanting',
+        actionTitle: 'Seed Sowing',
+        description:
+            'Dibble seeds at 3-4 cm depth. Spacing: 90×60 cm (Hybrid) or 60×30 cm (varieties). Sow 2-3 seeds per hill. Maintain 70% soil moisture.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 30,
+        stageName: 'Irrigation Management',
+        actionTitle: 'Critical Irrigation',
+        description:
+            'Apply 60-70 mm irrigation at square formation, flowering, and boll development. Provide 6-8 irrigations (450-600 mm total). Use drip @ 4 liters/hr.',
+        icon: 'water_drop',
+      ),
+      CropStage(
+        daysAfterPlanting: 45,
+        stageName: 'Intercultural Operations',
+        actionTitle: 'Top Dressing & Weeding',
+        description:
+            'Apply 65 kg/ha Urea (30 kg N/ha) at square stage. Apply 25 kg/ha MOP (Muriate of Potash) at flowering. Spray Pendimethalin @ 3.3 liters/ha for weeds.',
+        icon: 'eco',
+      ),
+      CropStage(
+        daysAfterPlanting: 80,
+        stageName: 'Plant Protection',
+        actionTitle: 'Bollworm Control',
+        description:
+            'Install 12 pheromone traps/ha. Spray Emamectin Benzoate @ 0.5g/liter or Spinosad @ 0.3 ml/liter for bollworms. For whitefly, use Acetamiprid @ 0.3g/liter.',
+        icon: 'pest_control',
+      ),
+      CropStage(
+        daysAfterPlanting: 150,
+        stageName: 'Harvesting',
+        actionTitle: 'Pick Cotton Bolls',
+        description:
+            'Pick when 60% bolls burst open. Do 3-4 pickings at 15-day intervals. Expected yield: 20-25 quintals/ha. Avoid moisture contamination.',
+        icon: 'agriculture',
+      ),
+      CropStage(
+        daysAfterPlanting: 155,
+        stageName: 'Post-Harvest Processing',
+        actionTitle: 'Ginning & Storage',
+        description:
+            'Gin within 48 hours (30-32% ginning outturn). Sun-dry to 8-10% moisture. Grade as per quality. Store in moisture-proof bags at <65% RH.',
+        icon: 'verified',
+      ),
+    ];
+
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Cotton',
+      fallbackStages: fallbackStages,
+    );
+
     return Crop(
       id: 'cotton',
       name: 'Cotton',
@@ -544,29 +721,129 @@ class HomeController extends ChangeNotifier {
         12: SeasonSuitability.notRecommended,
       },
       monthlyTasks: {},
-      lifecycleStages: [
-        CropStage(
-          daysAfterPlanting: 1,
-          stageName: 'Sowing',
-          actionTitle: 'Seed Sowing',
-          description: 'Dibble seeds at proper spacing.',
-          icon: Icons.adjust,
-        ),
-        CropStage(
-          daysAfterPlanting: 30,
-          stageName: 'Vegetative',
-          actionTitle: 'Thinning',
-          description: 'Remove excess seedlings per hill.',
-          icon: Icons.content_cut,
-        ),
-        CropStage(
-          daysAfterPlanting: 60,
-          stageName: 'Flowering',
-          actionTitle: 'Pest Check',
-          description: 'Check for bollworms.',
-          icon: Icons.bug_report,
-        ),
-      ],
+      lifecycleStages: lifecycleStages,
+    );
+  }
+
+  Future<Crop> _createRagiCrop() async {
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing',
+        actionTitle: 'Seed Sowing',
+        description: 'Broadcast or drill sowing.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 20,
+        stageName: 'Tillering',
+        actionTitle: 'Weeding',
+        description: 'First weeding and thinning.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 60,
+        stageName: 'Flowering',
+        actionTitle: 'Fertilizer Application',
+        description: 'Apply top dressing.',
+        icon: 'science',
+      ),
+      CropStage(
+        daysAfterPlanting: 100,
+        stageName: 'Maturity',
+        actionTitle: 'Harvest',
+        description: 'Harvest when grains are hard.',
+        icon: 'local_florist',
+      ),
+    ];
+
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Ragi',
+      fallbackStages: fallbackStages,
+    );
+
+    return Crop(
+      id: 'ragi',
+      name: 'Ragi',
+      icon: '🌾',
+      themeColor: const Color(0xFF8D6E63),
+      monthSuitability: {
+        1: SeasonSuitability.notRecommended,
+        2: SeasonSuitability.notRecommended,
+        3: SeasonSuitability.notRecommended,
+        4: SeasonSuitability.normal,
+        5: SeasonSuitability.highCompatibility,
+        6: SeasonSuitability.highCompatibility,
+        7: SeasonSuitability.highCompatibility,
+        8: SeasonSuitability.normal,
+        9: SeasonSuitability.notRecommended,
+        10: SeasonSuitability.notRecommended,
+        11: SeasonSuitability.notRecommended,
+        12: SeasonSuitability.notRecommended,
+      },
+      monthlyTasks: {},
+      lifecycleStages: lifecycleStages,
+    );
+  }
+
+  Future<Crop> _createPulsesCrop() async {
+    final fallbackStages = [
+      CropStage(
+        daysAfterPlanting: 1,
+        stageName: 'Sowing',
+        actionTitle: 'Seed Sowing',
+        description: 'Sow seeds at proper depth.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 25,
+        stageName: 'Vegetative',
+        actionTitle: 'Weeding',
+        description: 'Remove weeds around plants.',
+        icon: 'grass',
+      ),
+      CropStage(
+        daysAfterPlanting: 50,
+        stageName: 'Flowering',
+        actionTitle: 'Pest Management',
+        description: 'Monitor for pod borers.',
+        icon: 'pest_control',
+      ),
+      CropStage(
+        daysAfterPlanting: 80,
+        stageName: 'Maturity',
+        actionTitle: 'Harvest',
+        description: 'Harvest when pods are dry.',
+        icon: 'agriculture',
+      ),
+    ];
+
+    final lifecycleStages = await _getLifecycleStages(
+      cropName: 'Pulses',
+      fallbackStages: fallbackStages,
+    );
+
+    return Crop(
+      id: 'pulses',
+      name: 'Pulses',
+      icon: '🫘',
+      themeColor: const Color(0xFF6D4C41),
+      monthSuitability: {
+        1: SeasonSuitability.notRecommended,
+        2: SeasonSuitability.notRecommended,
+        3: SeasonSuitability.notRecommended,
+        4: SeasonSuitability.notRecommended,
+        5: SeasonSuitability.notRecommended,
+        6: SeasonSuitability.highCompatibility,
+        7: SeasonSuitability.highCompatibility,
+        8: SeasonSuitability.normal,
+        9: SeasonSuitability.notRecommended,
+        10: SeasonSuitability.highCompatibility,
+        11: SeasonSuitability.normal,
+        12: SeasonSuitability.notRecommended,
+      },
+      monthlyTasks: {},
+      lifecycleStages: lifecycleStages,
     );
   }
 }

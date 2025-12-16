@@ -11,7 +11,7 @@ class DiseaseDetectionController extends ChangeNotifier {
   // Update this IP to your computer's local IP when testing on physical device
   static const String _emulatorUrl = 'http://10.0.2.2:5001';
   static const String _physicalDeviceUrl =
-      'http://192.168.5.102:5001'; // Your computer's IP
+      'http://192.168.137.33:5001'; // Your computer's IP
 
   // Connection timeout in seconds
   static const int _connectionTimeout = 15;

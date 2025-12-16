@@ -27,7 +27,7 @@ class CropStage {
   final String stageName; // e.g., "Germination"
   final String actionTitle; // e.g., "Apply First Fertilizer"
   final String description; // e.g., "Apply NPK..."
-  final IconData icon;
+  final dynamic icon; // Can be IconData or String (icon name)
 
   CropStage({
     required this.daysAfterPlanting,
@@ -36,23 +36,52 @@ class CropStage {
     required this.description,
     this.icon = Icons.grass,
   });
+
+  // Helper to get IconData from string or return as-is
+  IconData get iconData {
+    if (icon is IconData) return icon as IconData;
+    if (icon is String) {
+      // Map string names to IconData
+      switch (icon.toLowerCase()) {
+        case 'agriculture':
+          return Icons.agriculture;
+        case 'water_drop':
+          return Icons.water_drop;
+        case 'eco':
+          return Icons.eco;
+        case 'pest_control':
+          return Icons.pest_control;
+        case 'grass':
+          return Icons.grass;
+        case 'science':
+          return Icons.science;
+        case 'verified':
+          return Icons.verified;
+        case 'local_florist':
+          return Icons.local_florist;
+        default:
+          return Icons.grass;
+      }
+    }
+    return Icons.grass;
+  }
 }
 
 enum SeasonSuitability {
-  highCompatibility, // Peak season (Red)
-  normal, // Moderate season (Green)
-  notRecommended, // Not ideal (Yellow)
+  highCompatibility, // Peak season (Green)
+  normal, // Moderate season (Light Yellow)
+  notRecommended, // Not ideal (Red)
 }
 
 extension SeasonSuitabilityExtension on SeasonSuitability {
   Color get color {
     switch (this) {
       case SeasonSuitability.highCompatibility:
-        return const Color(0xFFE74C3C); // Red
-      case SeasonSuitability.normal:
         return const Color(0xFF27AE60); // Green
+      case SeasonSuitability.normal:
+        return const Color(0xFFFFA726); // Light Yellow/Orange
       case SeasonSuitability.notRecommended:
-        return const Color(0xFFF39C12); // Yellow
+        return const Color(0xFFE74C3C); // Red
     }
   }
 
