@@ -8,6 +8,8 @@ class DiseaseResult {
   final List<String> classes;
   final List<double> probabilities;
   final List<TopPrediction> topPredictions;
+  final String? description;
+  final String? treatment;
 
   DiseaseResult({
     required this.model,
@@ -17,6 +19,8 @@ class DiseaseResult {
     required this.classes,
     required this.probabilities,
     required this.topPredictions,
+    this.description,
+    this.treatment,
   });
 
   factory DiseaseResult.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,8 @@ class DiseaseResult {
       topPredictions: (json['top'] as List)
           .map((e) => TopPrediction.fromJson(e as Map<String, dynamic>))
           .toList(),
+      description: json['description'] as String?,
+      treatment: json['treatment'] as String?,
     );
   }
 

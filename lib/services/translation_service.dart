@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TranslationService {
-  static const String _apiKey = 'sk_qkuwvpnz_Qmc4avxO4uiTyfbt30wNeBkx';
+  static String get _apiKey => dotenv.env['SARVAM_API_KEY'] ?? '';
   static const String _baseUrl = 'https://api.sarvam.ai/translate';
 
   // Cache to avoid repeated API calls for same text

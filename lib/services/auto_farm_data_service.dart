@@ -2,6 +2,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'sentinel_hub_service.dart';
 
 /// Automated Farm Data Collection Service
@@ -11,7 +12,7 @@ class AutoFarmDataService {
   final SentinelHubService _sentinelHub = SentinelHubService();
 
   // OpenWeather API - Replace with your key
-  static const String _openWeatherApiKey = 'YOUR_OPENWEATHER_API_KEY';
+  static String get _openWeatherApiKey => dotenv.env['OPENWEATHER_API_KEY'] ?? '';
 
   /// Get comprehensive farm data automatically from user's location
   /// Returns all data needed for AgriAIInput model
@@ -236,7 +237,7 @@ class AutoFarmDataService {
           orElse: () => null,
         );
         final ph = phData != null
-            ? (phData['depths'][0]['values']['mean'] ?? 65) / 10.0
+            ? ((phData['depths'][0]['values']['mean'] as num?)?.toDouble() ?? 65.0) / 10.0
             : 6.5;
 
         // Extract SOC (Soil Organic Carbon, in g/kg, divide by 10 for %)
@@ -245,7 +246,7 @@ class AutoFarmDataService {
           orElse: () => null,
         );
         final soc = socData != null
-            ? (socData['depths'][0]['values']['mean'] ?? 5.0) / 10.0
+            ? ((socData['depths'][0]['values']['mean'] as num?)?.toDouble() ?? 5.0) / 10.0
             : 0.5;
 
         // Extract soil texture (clay, sand, silt percentages)
@@ -259,11 +260,11 @@ class AutoFarmDataService {
         );
 
         final clay = clayData != null
-            ? clayData['depths'][0]['values']['mean']
-            : 25;
+            ? (clayData['depths'][0]['values']['mean'] as num?)?.toDouble() ?? 25.0
+            : 25.0;
         final sand = sandData != null
-            ? sandData['depths'][0]['values']['mean']
-            : 40;
+            ? (sandData['depths'][0]['values']['mean'] as num?)?.toDouble() ?? 40.0
+            : 40.0;
 
         // Determine soil type from texture
         final soilType = _determineSoilType(clay, sand);

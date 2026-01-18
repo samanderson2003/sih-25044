@@ -70,6 +70,7 @@ class DiseaseDetectionController extends ChangeNotifier {
   Future<DiseaseResult?> detectDisease(
     File imageFile, {
     String? modelKey,
+    Map<String, String>? extraFields,
   }) async {
     _isLoading = true;
     _error = null;
@@ -93,6 +94,11 @@ class DiseaseDetectionController extends ChangeNotifier {
       // Add model selection if specified
       if (modelKey != null) {
         request.fields['model'] = modelKey;
+      }
+
+      // Add extra fields if provided
+      if (extraFields != null) {
+        request.fields.addAll(extraFields);
       }
 
       // Send request with timeout

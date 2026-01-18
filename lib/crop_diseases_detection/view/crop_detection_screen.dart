@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../controller/disease_detection_controller.dart';
 import 'disease_result_screen.dart';
+import 'livestock_detection_view.dart';
 import '../../widgets/translated_text.dart';
 
 class CropDetectionScreen extends StatefulWidget {
@@ -27,13 +28,49 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
       'color': Color(0xFFD4AF37),
     },
     {
-      'name': 'Tomato',
+      'name': 'Tomato', // Common
       'key': 'tomato_segmented',
       'icon': '🍅',
       'color': Color(0xFFFF6347),
     },
     {
-      'name': 'Apple',
+      'name': 'Carrot', // New
+      'key': 'carrot_segmented',
+      'icon': '🥕',
+      'color': Color(0xFFED9121),
+    },
+    {
+      'name': 'Maize', // New
+      'key': 'maize_segmented',
+      'icon': '🌽',
+      'color': Color(0xFFFBEC5D),
+    },
+    {
+      'name': 'Cucumber', // New
+      'key': 'cucumber_segmented',
+      'icon': '🥒',
+      'color': Color(0xFF228B22),
+    },
+    {
+      'name': 'Brinjal', // New
+      'key': 'brinjal_segmented',
+      'icon': '🍆',
+      'color': Color(0xFF4B0082),
+    },
+    {
+      'name': 'Guava', // New
+      'key': 'guava_segmented',
+      'icon': '🍈',
+      'color': Color(0xFF98FB98),
+    },
+    {
+      'name': 'Watermelon', // New
+      'key': 'watermelon_segmented',
+      'icon': '🍉',
+      'color': Color(0xFFDC143C),
+    },
+    {
+      'name': 'Apple', // Common
       'key': 'apple_segmented',
       'icon': '🍎',
       'color': Color(0xFFDC143C),
@@ -179,13 +216,69 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
     }
   }
 
+  bool _isLivestockMode = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6F0),
-      body: _selectedCrop == null
-          ? _buildCropSelectionView()
-          : _buildImageCaptureView(),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF8F6F0),
+        elevation: 0,
+        title: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: const Color(0xFF2D5016).withOpacity(0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildToggleButton('CROP', !_isLivestockMode),
+              _buildToggleButton('LIVESTOCK', _isLivestockMode),
+            ],
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: _isLivestockMode
+          ? const LivestockDetectionView()
+          : _selectedCrop == null
+              ? _buildCropSelectionView()
+              : _buildImageCaptureView(),
+    );
+  }
+
+  Widget _buildToggleButton(String text, bool isSelected) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _isLivestockMode = text == 'LIVESTOCK';
+          if (_isLivestockMode) {
+            _selectedCrop = null; // Reset crop selection when switching
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(25),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (_isLivestockMode ? const Color(0xFFFCCD2A) : const Color(0xFF2D5016))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isSelected
+                ? (_isLivestockMode ? Colors.black : Colors.white)
+                : Colors.grey[600],
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'firebase_options.dart';
 import 'auth/view/login_screen.dart';
@@ -11,6 +12,7 @@ import 'auth/view/register_screen.dart';
 import 'home/main_home_screen.dart';
 import 'crop_yield_prediction/view/crop_yield_prediction_screen.dart';
 import 'crop_diseases_detection/controller/disease_detection_controller.dart';
+import 'profile/controller/cattle_controller.dart';
 import 'terms&permissions/controller/terms&conditions_controller.dart';
 import 'terms&permissions/view/terms&conditions_view.dart';
 import 'terms&permissions/view/permissions_screen.dart';
@@ -31,6 +33,10 @@ Future<void> main() async {
     } else {
       debugPrint('Firebase already initialized — reusing existing instance.');
     }
+    
+    // Initialize dotenv
+    await dotenv.load(fileName: ".env");
+    
   } catch (e, st) {
     // Log error but continue so the app shows an error UI instead of crashing.
     debugPrint('Firebase initialization error: $e');
@@ -59,6 +65,7 @@ class MyApp extends StatelessWidget {
         // so we register them with plain Provider.
         Provider<TermsConditionsController>(create: (_) => TermsConditionsController()),
         Provider<FarmDataController>(create: (_) => FarmDataController()),
+        Provider<CattleController>(create: (_) => CattleController()),
       ],
       child: MaterialApp(
         title: 'CropYield - Smart Farming',

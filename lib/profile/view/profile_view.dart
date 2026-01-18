@@ -12,6 +12,9 @@ import '../../widgets/translated_text.dart';
 import '../../widgets/farm_plot_visualization.dart';
 import '../../models/farm_plot_model.dart';
 import 'farm_plot_editor_screen.dart';
+import '../controller/cattle_controller.dart';
+import '../model/cattle_model.dart';
+import 'add_cattle_screen.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -24,6 +27,7 @@ class _ProfileViewState extends State<ProfileView> {
   final _controller = ProfileController();
   final _farmDataController = FarmDataController();
   final _farmPlotController = FarmPlotController();
+  final _cattleController = CattleController();
   final _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isSaving = false;
@@ -81,11 +85,16 @@ class _ProfileViewState extends State<ProfileView> {
             ),
         ],
       ),
+
       body: user == null
           ? const Center(child: TranslatedText('Not logged in'))
           : StreamBuilder<DocumentSnapshot>(
               stream: _controller.getUserProfileStream(),
               builder: (context, userSnapshot) {
+                if (userSnapshot.hasError) {
+                  return Center(child: Text('Error: ${userSnapshot.error}'));
+                }
+
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -99,10 +108,10 @@ class _ProfileViewState extends State<ProfileView> {
                 final userData =
                     userSnapshot.data!.data() as Map<String, dynamic>;
                 final displayName = userData['displayName'] ?? '';
-                // REMOVED: final email = userData['email'] ?? user.email ?? '';
-                final mobileNumber = userData['mobileNumber']?.toString() ?? '';
+                final mobileNumber = userData['mobileNumber'] ?? '';
+                // ignore: unused_local_variable
+                final email = userData['email'] ?? '';
 
-                // Set controllers if not editing
                 if (!_isEditing) {
                   _nameController.text = displayName;
                   _mobileController.text = mobileNumber;
@@ -111,11 +120,11 @@ class _ProfileViewState extends State<ProfileView> {
                 return StreamBuilder<DocumentSnapshot>(
                   stream: _controller.getFarmDataStream(),
                   builder: (context, farmSnapshot) {
-                    final hasFarmData =
-                        farmSnapshot.hasData && farmSnapshot.data!.exists;
-                    final farmData = hasFarmData
-                        ? farmSnapshot.data!.data() as Map<String, dynamic>?
-                        : null;
+                    final farmData =
+                        farmSnapshot.hasData && farmSnapshot.data!.exists
+                            ? farmSnapshot.data!.data() as Map<String, dynamic>
+                            : null;
+                    final hasFarmData = farmData != null;
 
                     return SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
@@ -127,7 +136,7 @@ class _ProfileViewState extends State<ProfileView> {
                             // Profile Picture
                             Center(
                               child: CircleAvatar(
-                                radius: 60,
+                                radius: 50,
                                 backgroundColor: const Color(0xFF2D5016),
                                 child: Text(
                                   displayName.isNotEmpty
@@ -162,13 +171,6 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                             const SizedBox(height: 15),
 
-                            // REMOVED EMAIL FIELD:
-                            // _buildInfoCard(
-                            //   icon: Icons.email,
-                            //   label: 'Email',
-                            //   value: email,
-                            // ),
-                            // const SizedBox(height: 15),
                             _buildEditableField(
                               label: 'Mobile Number',
                               controller: _mobileController,
@@ -345,6 +347,13 @@ class _ProfileViewState extends State<ProfileView> {
                               ),
 
                             const SizedBox(height: 30),
+
+                            // Livestock Section
+                            _buildLivestockSection(),
+
+                            const SizedBox(height: 30),
+
+
 
                             // Action Buttons
                             if (_isEditing) ...[
@@ -904,6 +913,199 @@ class _ProfileViewState extends State<ProfileView> {
           backgroundColor: saveResult['success'] ? Colors.green : Colors.red,
         ),
       );
+    }
+  }
+
+  Widget _buildLivestockSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const TranslatedText(
+              'Livestock',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2D5016),
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddCattleScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_circle, color: Color(0xFF2D5016)),
+              tooltip: 'Add Cattle',
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
+        StreamBuilder<List<CattleModel>>(
+          stream: _cattleController.getCattleStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F6F0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF2D5016).withOpacity(0.2),
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.pets,
+                        size: 40,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 10),
+                      const TranslatedText(
+                        'No livestock added yet',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AddCattleScreen(),
+                            ),
+                          );
+                        },
+                        child: const TranslatedText(
+                          'Add your first cattle',
+                          style: TextStyle(color: Color(0xFF2D5016)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: snapshot.data!.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final cattle = snapshot.data![index];
+                return _buildCattleCard(cattle);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCattleCard(CattleModel cattle) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D5016).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              cattle.type == 'cow'
+                  ? '🐄'
+                  : cattle.type == 'goat'
+                      ? '🐐'
+                      : '🐃',
+              style: const TextStyle(fontSize: 24),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  cattle.breed,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D5016),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${cattle.type[0].toUpperCase()}${cattle.type.substring(1)} • ${cattle.age} years old',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () => _confirmDeleteCattle(cattle),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteCattle(CattleModel cattle) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const TranslatedText('Delete Cattle'),
+        content: Text('Are you sure you want to delete this ${cattle.breed}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const TranslatedText('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _cattleController.deleteCattle(cattle.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cattle deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 }

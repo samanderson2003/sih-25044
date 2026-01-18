@@ -6,6 +6,7 @@ import 'package:lottie/lottie.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class BotScreen extends StatefulWidget {
   const BotScreen({super.key});
@@ -23,8 +24,7 @@ class _BotScreenState extends State<BotScreen> {
   bool _isListening = false;
   String _recognizedText = '';
   String? _selectedImagePath;
-  static const String _apiKey =
-      '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';
+  static String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
   static const String _systemPrompt = '''
 You are FarmBot, an intelligent agricultural assistant designed to help Indian farmers. 
