@@ -49,7 +49,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       ? const Color(0xFF2D5016)
                       : Colors.grey,
                 ),
-                label: languageProvider.isEnglish ? 'Home' : 'ଘର',
+                label: _getLabel(languageProvider.currentLanguage.code, 'Home'),
               ),
               BottomNavigationBarItem(
                 icon: Image.asset(
@@ -60,9 +60,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       ? const Color(0xFF2D5016)
                       : Colors.grey,
                 ),
-                label: languageProvider.isEnglish
-                    ? 'Prediction'
-                    : 'ପୂର୍ବାନୁମାନ',
+                label: _getLabel(languageProvider.currentLanguage.code, 'Prediction'),
               ),
               BottomNavigationBarItem(
                 icon: Image.asset(
@@ -73,7 +71,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       ? const Color(0xFF2D5016)
                       : Colors.grey,
                 ),
-                label: languageProvider.isEnglish ? 'Connect' : 'ସଂଯୋଗ',
+                label: _getLabel(languageProvider.currentLanguage.code, 'Connect'),
               ),
               BottomNavigationBarItem(
                 icon: Image.asset(
@@ -84,12 +82,39 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       ? const Color(0xFF2D5016)
                       : Colors.grey,
                 ),
-                label: languageProvider.isEnglish ? 'Profile' : 'ପ୍ରୋଫାଇଲ୍',
+                label: _getLabel(languageProvider.currentLanguage.code, 'Profile'),
               ),
             ],
           ),
         );
       },
     );
+  }
+
+  String _getLabel(String code, String feature) {
+    switch (feature) {
+      case 'Home':
+        if (code == 'or') return 'ଘର';
+        if (code == 'hi') return 'होम';
+        if (code == 'ta') return 'முகப்பு';
+        return 'Home';
+      case 'Prediction':
+        if (code == 'or') return 'ପୂର୍ବାନୁମାନ';
+        if (code == 'hi') return 'भविष्यवाणी';
+        if (code == 'ta') return 'கணிப்பு';
+        return 'Prediction';
+      case 'Connect':
+        if (code == 'or') return 'ସଂଯୋଗ';
+        if (code == 'hi') return 'जुड़ाव';
+        if (code == 'ta') return 'சமூகம்';
+        return 'Connect';
+      case 'Profile':
+        if (code == 'or') return 'ପ୍ରୋଫାଇଲ୍';
+        if (code == 'hi') return 'प्रोफाइल';
+        if (code == 'ta') return 'சுயவிவரம்';
+        return 'Profile';
+      default:
+        return feature;
+    }
   }
 }

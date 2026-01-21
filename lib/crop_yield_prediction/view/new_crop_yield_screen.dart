@@ -97,7 +97,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
           _selectedDistrict = location.district;
           _displayAddress = location.district != null && location.state != null
               ? '${location.district}, ${location.state}'
-              : 'Location loaded';
+              : 'Location loaded'; // This might need dynamic translation if used in UI directly
 
           // Load area
           _areaController.text = farmData.farmBasics.landSize.toString();
@@ -356,7 +356,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                Text('Weather → Soil → Satellite'),
+                TranslatedText('Weather → Soil → Satellite'),
               ],
             ),
           ),
@@ -645,14 +645,15 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _displayAddress,
+                            TranslatedText(
+                                _displayAddress,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: _latitude != null
                                     ? Colors.green.shade900
                                     : Colors.grey.shade700,
+                                fontFamily: 'Roboto', // Avoid issues with some scripts? No, system font is better.
                               ),
                             ),
                             if (_latitude != null && _longitude != null)
@@ -675,7 +676,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _openMapPicker,
                           icon: const Icon(Icons.map, size: 18),
-                          label: const Text('Pin on Map'),
+                          label: const TranslatedText('Pin on Map'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF2D5016),
                             side: const BorderSide(color: Color(0xFF2D5016)),
@@ -693,7 +694,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
 
             // Manual Address Entry (Expandable)
             ExpansionTile(
-              title: const Text(
+              title: const TranslatedText(
                 'Or Enter Address Manually',
                 style: TextStyle(
                   fontSize: 14,
@@ -763,7 +764,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                             ),
                           )
                         : const Icon(Icons.search_outlined, size: 20),
-                    label: Text(
+                    label: TranslatedText(
                       _isGeocodingAddress ? 'Searching...' : 'Find Location',
                     ),
                     style: ElevatedButton.styleFrom(
@@ -809,16 +810,23 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _latitude != null
-                          ? '✅ Data auto-filled from satellite & weather APIs'
-                          : 'Select location to auto-fetch weather, soil & satellite data',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.blue.shade900,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: _latitude != null
+                        ? TranslatedText(
+                            '✅ Data auto-filled from satellite & weather APIs',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        : TranslatedText(
+                            'Select location to auto-fetch weather, soil & satellite data',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -983,11 +991,14 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                         children: [
                           Icon(Icons.insights, size: 24),
                           SizedBox(width: 12),
-                          TranslatedText(
-                            'Get AI Recommendations',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: TranslatedText(
+                              'Get AI Recommendations',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -1238,7 +1249,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                   ),
                   child: Column(
                     children: [
-                      Text(
+                      TranslatedText(
                         'Current Yield',
                         style: TextStyle(
                           fontSize: 11,
@@ -1269,7 +1280,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
                   ),
                   child: Column(
                     children: [
-                      Text(
+                      TranslatedText(
                         'Potential Yield',
                         style: TextStyle(
                           fontSize: 11,
@@ -1576,12 +1587,14 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
       children: [
         Icon(icon, color: const Color(0xFF2D5016), size: 24),
         const SizedBox(width: 8),
-        TranslatedText(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D5016),
+        Expanded(
+          child: TranslatedText(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D5016),
+            ),
           ),
         ),
       ],
@@ -1600,7 +1613,8 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
       controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
-        labelText: label,
+        label: TranslatedText(label, style: TextStyle(color: Colors.grey.shade700)),
+        // labelText: label, // Replaced with widget for translation
         hintText: hint,
         prefixIcon: Icon(icon, color: const Color(0xFF2D5016)),
         filled: true,
@@ -1638,7 +1652,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
     return DropdownButtonFormField<String>(
       value: value,
       decoration: InputDecoration(
-        labelText: label,
+        label: TranslatedText(label, style: TextStyle(color: Colors.grey.shade700)),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
@@ -1655,7 +1669,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
         ),
       ),
       items: items.map((item) {
-        return DropdownMenuItem(value: item, child: Text(item));
+        return DropdownMenuItem(value: item, child: TranslatedText(item));
       }).toList(),
       onChanged: onChanged,
     );

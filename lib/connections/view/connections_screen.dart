@@ -75,13 +75,13 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                               ),
                             ),
                             SizedBox(height: 16),
-                            Text(
-                              'Loading farmers...',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                              const TranslatedText(
+                                'Loading farmers...',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -468,7 +468,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               onPressed: () => _showMarkAlertDialog(context, controller),
               backgroundColor: Colors.redAccent,
               icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-              label: const Text('Mark Alert', style: TextStyle(color: Colors.white)),
+              label: const TranslatedText('Mark Alert', style: TextStyle(color: Colors.white)),
             );
           },
         ),
@@ -505,7 +505,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                 ]
               : null,
         ),
-        child: Text(
+        child: TranslatedText(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.grey.shade700,
@@ -538,13 +538,13 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Mark Risk Alert'),
+            title: const TranslatedText('Mark Risk Alert'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  const TranslatedText(
                     'Report an issue at your location to warn other farmers.',
                     style: TextStyle(fontSize: 14, color: Colors.black87),
                   ),
@@ -554,7 +554,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                   DropdownButtonFormField<String>(
                     value: selectedType,
                     decoration: const InputDecoration(
-                      labelText: 'Alert Type',
+                      label: TranslatedText('Alert Type'),
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
@@ -571,7 +571,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                               size: 20,
                             ),
                             const SizedBox(width: 8),
-                            Text(type),
+                            Text(type), // Type names (Crop, Livestock) should also be translated ideally, or use icons mostly
                           ],
                         ),
                       );
@@ -587,8 +587,8 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                   TextField(
                     controller: alertController,
                     decoration: const InputDecoration(
-                      labelText: 'Alert Message',
-                      hintText: 'e.g., Pest Attack, Disease',
+                      label: TranslatedText('Alert Message'),
+                      hintText: 'e.g., Pest Attack, Disease', // Hint text needs dynamic translation or manual lookup
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.edit),
                     ),
@@ -618,7 +618,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const TranslatedText('Cancel'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -638,7 +638,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5016)),
-                child: const Text('Mark Alert', style: TextStyle(color: Colors.white)),
+                child: const TranslatedText('Mark Alert', style: TextStyle(color: Colors.white)),
               ),
             ],
           );

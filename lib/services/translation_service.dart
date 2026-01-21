@@ -9,6 +9,52 @@ class TranslationService {
   // Cache to avoid repeated API calls for same text
   static final Map<String, Map<String, String>> _cache = {};
 
+  // Local dictionary for static content (Months)
+  static final Map<String, Map<String, String>> _localDictionary = {
+    'ta': {
+      'January': 'ஜனவரி',
+      'February': 'பிப்ரவரி',
+      'March': 'மார்ச்',
+      'April': 'ஏப்ரல்',
+      'May': 'மே',
+      'June': 'ஜூன்',
+      'July': 'ஜூலை',
+      'August': 'ஆகஸ்ட்',
+      'September': 'செப்டம்பர்',
+      'October': 'அக்டோபர்',
+      'November': 'நவம்பர்',
+      'December': 'டிசம்பர்',
+    },
+    'or': {
+      'January': 'ଜାନୁଆରୀ',
+      'February': 'ଫେବୃଆରୀ',
+      'March': 'ମାର୍ଚ୍ଚ',
+      'April': 'ଏପ୍ରିଲ',
+      'May': 'ମେ',
+      'June': 'ଜୁନ',
+      'July': 'ଜୁଲାଇ',
+      'August': 'ଅଗଷ୍ଟ',
+      'September': 'ସେପ୍ଟେମ୍ବର',
+      'October': 'ଅକ୍ଟୋବର',
+      'November': 'ନଭେମ୍ବର',
+      'December': 'ଡିସେମ୍ବର',
+    },
+    'hi': {
+      'January': 'जनवरी',
+      'February': 'फरवरी',
+      'March': 'मार्च',
+      'April': 'अप्रैल',
+      'May': 'मई',
+      'June': 'जून',
+      'July': 'जुलाई',
+      'August': 'अगस्त',
+      'September': 'सितंबर',
+      'October': 'अक्टूबर',
+      'November': 'नवंबर',
+      'December': 'दिसंबर',
+    },
+  };
+
   // Rate limiting
   static DateTime? _lastRequestTime;
   static const _minDelayBetweenRequests = Duration(milliseconds: 100);
@@ -25,6 +71,12 @@ class TranslationService {
     // If target is same as source, return original
     if (targetLanguage == sourceLanguage) return text;
 
+    // Check local dictionary first (for static known values like months)
+    if (_localDictionary.containsKey(targetLanguage) && 
+        _localDictionary[targetLanguage]!.containsKey(text)) {
+      return _localDictionary[targetLanguage]![text]!;
+    }
+
     // Check cache first
     if (_cache.containsKey(targetLanguage) &&
         _cache[targetLanguage]!.containsKey(text)) {
@@ -40,9 +92,19 @@ class TranslationService {
     }
 
     try {
-      // Sarvam AI uses language codes like 'en-IN', 'od-IN' (not or-IN!)
-      final sourceCode = sourceLanguage == 'en' ? 'en-IN' : 'od-IN';
-      final targetCode = targetLanguage == 'or' ? 'od-IN' : 'en-IN';
+      // Sarvam AI uses language codes like 'en-IN', 'od-IN', 'hi-IN', 'ta-IN'
+      String getSarvamCode(String code) {
+        switch (code) {
+          case 'en': return 'en-IN';
+          case 'or': return 'od-IN'; // Sarvam uses 'od-IN' for Odia
+          case 'hi': return 'hi-IN';
+          case 'ta': return 'ta-IN';
+          default: return 'en-IN';
+        }
+      }
+
+      final sourceCode = getSarvamCode(sourceLanguage);
+      final targetCode = getSarvamCode(targetLanguage);
 
       _lastRequestTime = DateTime.now();
 
@@ -114,6 +176,8 @@ class TranslationService {
     return [
       {'code': 'en', 'name': 'English'},
       {'code': 'or', 'name': 'Odia'},
+      {'code': 'hi', 'name': 'Hindi'},
+      {'code': 'ta', 'name': 'Tamil'},
     ];
   }
 }

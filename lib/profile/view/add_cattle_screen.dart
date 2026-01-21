@@ -154,9 +154,9 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
               value: _selectedType,
               isExpanded: true,
               items: const [
-                DropdownMenuItem(value: 'cow', child: Text('🐄 Cattle')),
-                DropdownMenuItem(value: 'goat', child: Text('🐐 Goat')),
-                DropdownMenuItem(value: 'buffalo', child: Text('🐃 Buffalo')),
+                DropdownMenuItem(value: 'cow', child: TranslatedText('🐄 Cattle')),
+                DropdownMenuItem(value: 'goat', child: TranslatedText('🐐 Goat')),
+                DropdownMenuItem(value: 'buffalo', child: TranslatedText('🐃 Buffalo')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -200,7 +200,7 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
               items: _breeds[_selectedType]!
                   .map((breed) => DropdownMenuItem(
                         value: breed,
-                        child: Text(breed),
+                        child: TranslatedText(breed),
                       ))
                   .toList(),
               onChanged: (value) {

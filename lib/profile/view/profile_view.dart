@@ -599,14 +599,14 @@ class _ProfileViewState extends State<ProfileView> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Text(
+                    child: TranslatedText(
                       _controller.formatFieldName(entry.key),
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ),
                   Expanded(
                     flex: 3,
-                    child: Text(
+                    child: TranslatedText(
                       displayValue,
                       style: const TextStyle(
                         fontWeight: FontWeight.w500,
@@ -1049,7 +1049,7 @@ class _ProfileViewState extends State<ProfileView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TranslatedText(
                   cattle.breed,
                   style: const TextStyle(
                     fontSize: 16,
@@ -1058,9 +1058,21 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${cattle.type[0].toUpperCase()}${cattle.type.substring(1)} • ${cattle.age} years old',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                Row(
+                  children: [
+                    TranslatedText(
+                      cattle.type[0].toUpperCase() + cattle.type.substring(1),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    Text(
+                      ' • ${cattle.age} ',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    TranslatedText(
+                      'years old',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
               ],
             ),

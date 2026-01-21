@@ -157,7 +157,7 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
               children: [
                 CircularProgressIndicator(color: Color(0xFF2D5016)),
                 SizedBox(height: 16),
-                Text('Analyzing image...'),
+                TranslatedText('Analyzing image...'),
               ],
             ),
           ),
@@ -194,17 +194,17 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
               children: const [
                 Icon(Icons.error_outline, color: Colors.red),
                 SizedBox(width: 8),
-                Text('Detection Failed'),
+                TranslatedText('Detection Failed'),
               ],
             ),
-            content: Text(
+            content: TranslatedText(
               controller.error ?? 'Failed to detect disease. Please try again.',
               style: const TextStyle(fontSize: 14),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: const TranslatedText(
                   'OK',
                   style: TextStyle(color: Color(0xFF2D5016)),
                 ),
@@ -268,7 +268,7 @@ class _CropDetectionScreenState extends State<CropDetectionScreen> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(25),
         ),
-        child: Text(
+        child: TranslatedText(
           text,
           style: TextStyle(
             color: isSelected

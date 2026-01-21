@@ -12,6 +12,8 @@ class LanguageProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isOdia => _currentLanguage.code == 'or';
   bool get isEnglish => _currentLanguage.code == 'en';
+  bool get isHindi => _currentLanguage.code == 'hi';
+  bool get isTamil => _currentLanguage.code == 'ta';
 
   LanguageProvider() {
     _loadLanguagePreference();
@@ -70,11 +72,11 @@ class LanguageProvider extends ChangeNotifier {
     }
   }
 
-  /// Toggle between English and Odia
+  /// Toggle between languages cyclically
   Future<void> toggleLanguage() async {
-    final newLanguage = _currentLanguage.code == 'en'
-        ? AppLanguages.odia
-        : AppLanguages.english;
-    await changeLanguage(newLanguage);
+    final currentIndex = AppLanguages.supportedLanguages.indexOf(_currentLanguage);
+    final nextIndex = (currentIndex + 1) % AppLanguages.supportedLanguages.length;
+    final nextLanguage = AppLanguages.supportedLanguages[nextIndex];
+    await changeLanguage(nextLanguage);
   }
 }

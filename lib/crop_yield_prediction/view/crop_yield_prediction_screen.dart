@@ -517,7 +517,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               children: [
                 const Icon(Icons.agriculture, color: Colors.white, size: 48),
                 const SizedBox(height: 12),
-                const Text(
+                const TranslatedText(
                   '🌾 CROP YIELD PREDICTION',
                   style: TextStyle(
                     fontSize: 22,
@@ -545,7 +545,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Text(
+                      const TranslatedText(
                         'Expected Yield',
                         style: TextStyle(
                           fontSize: 18,
@@ -613,7 +613,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          const TranslatedText(
                             '📊 Regional Average: ',
                             style: TextStyle(fontSize: 16, color: Colors.white),
                           ),
@@ -656,7 +656,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    const TranslatedText(
                       'Confidence Level: ',
                       style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
@@ -691,7 +691,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           // ===========================
           // SECTION 3: SMART RECOMMENDATIONS (TABS)
           // ===========================
-          const Text(
+          const TranslatedText(
             '📋 SMART RECOMMENDATIONS',
             style: TextStyle(
               fontSize: 24,
@@ -754,7 +754,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               });
             },
             icon: const Icon(Icons.refresh, size: 28),
-            label: const Text('NEW PREDICTION', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            label: const TranslatedText('NEW PREDICTION', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D32),
               foregroundColor: Colors.white,
@@ -778,13 +778,13 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           Icon(icon, color: Colors.white70, size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: TranslatedText(
               label,
               style: const TextStyle(fontSize: 16, color: Colors.white70),
             ),
           ),
           Text(
-            value,
+            value, // Value is often dynamic/numeric
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -820,7 +820,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          const TranslatedText(
             '📈 WHAT\'S HELPING YOUR YIELD',
             style: TextStyle(
               fontSize: 20,
@@ -839,7 +839,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           const Divider(),
           const SizedBox(height: 16),
           
-          const Text(
+          const TranslatedText(
             '⚠️ WATCH OUT FOR',
             style: TextStyle(
               fontSize: 20,
@@ -872,7 +872,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: TranslatedText(
               text,
               style: TextStyle(
                 fontSize: 16,
@@ -909,14 +909,16 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         return FutureBuilder<String>(
-          future: languageProvider.isOdia
-              ? TranslationService.translate(label, targetLanguage: 'or')
-              : Future.value(label),
+          future: TranslationService.translate(
+            label,
+            targetLanguage: languageProvider.currentLanguage.code,
+          ),
           builder: (context, labelSnapshot) {
             return FutureBuilder<String>(
-              future: languageProvider.isOdia
-                  ? TranslationService.translate(hint, targetLanguage: 'or')
-                  : Future.value(hint),
+              future: TranslationService.translate(
+                hint,
+                targetLanguage: languageProvider.currentLanguage.code,
+              ),
               builder: (context, hintSnapshot) {
                 return TextFormField(
                   controller: controller,
@@ -970,9 +972,10 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         return FutureBuilder<String>(
-          future: languageProvider.isOdia
-              ? TranslationService.translate(label, targetLanguage: 'or')
-              : Future.value(label),
+          future: TranslationService.translate(
+            label,
+            targetLanguage: languageProvider.currentLanguage.code,
+          ),
           builder: (context, snapshot) {
             return DropdownButtonFormField<String>(
               value: value,
@@ -997,17 +1000,15 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               items: items.map((item) {
                 return DropdownMenuItem(
                   value: item,
-                  child: languageProvider.isOdia
-                      ? FutureBuilder<String>(
-                          future: TranslationService.translate(
-                            item,
-                            targetLanguage: 'or',
-                          ),
-                          builder: (context, itemSnapshot) {
-                            return Text(itemSnapshot.data ?? item);
-                          },
-                        )
-                      : Text(item),
+                  child: FutureBuilder<String>(
+                    future: TranslationService.translate(
+                      item,
+                      targetLanguage: languageProvider.currentLanguage.code,
+                    ),
+                    builder: (context, itemSnapshot) {
+                      return Text(itemSnapshot.data ?? item);
+                    },
+                  ),
                 );
               }).toList(),
               onChanged: onChanged,
@@ -1121,7 +1122,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      const TranslatedText(
                         '10% Profit Boost Plan',
                         style: TextStyle(
                           fontSize: 18,
@@ -1183,7 +1184,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text(
+                        child: TranslatedText(
                           'Category',
                           style: TextStyle(
                             fontSize: 13,
@@ -1194,7 +1195,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                       ),
                       Expanded(
                         flex: 3,
-                        child: Text(
+                        child: TranslatedText(
                           'Recommendation',
                           style: TextStyle(
                             fontSize: 13,
@@ -1205,7 +1206,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text(
+                        child: TranslatedText(
                           'Impact',
                           textAlign: TextAlign.right,
                           style: TextStyle(
@@ -1269,7 +1270,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                       size: 18,
                     ),
                     const SizedBox(width: 8),
-                    Text(
+                    TranslatedText(
                       'Projected Profit',
                       style: TextStyle(
                         fontSize: 14,
@@ -1445,7 +1446,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
               : [],
         ),
         child: Center(
-          child: Text(
+          child: TranslatedText(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -1697,7 +1698,7 @@ class _CropYieldPredictionScreenState extends State<CropYieldPredictionScreen> {
                 );
               },
               icon: const Icon(Icons.notifications_active, size: 28),
-              label: const Text('SET REMINDERS 🔔', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              label: const TranslatedText('SET REMINDERS 🔔', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
                 foregroundColor: Colors.white,

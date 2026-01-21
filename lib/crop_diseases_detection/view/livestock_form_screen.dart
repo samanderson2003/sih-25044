@@ -189,14 +189,14 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                       backgroundColor: const Color(0xFFFCCD2A),
                       foregroundColor: Colors.black,
                     ),
-                    child: Text(_currentStep == 2 ? 'Submit' : 'Next'),
+                    child: TranslatedText(_currentStep == 2 ? 'Submit' : 'Next'),
                   ),
                 ),
                 if (_currentStep > 0) ...[
                   const SizedBox(width: 12),
                   TextButton(
                     onPressed: details.onStepCancel,
-                    child: const Text('Back', style: TextStyle(color: Colors.grey)),
+                    child: const TranslatedText('Back', style: TextStyle(color: Colors.grey)),
                   ),
                 ],
               ],
@@ -215,13 +215,14 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                 }
                 final cattleList = snapshot.data!;
                 if (cattleList.isEmpty) {
-                  return const Text('No cattle found. Please add cattle in Profile first.');
+                  return const TranslatedText('No cattle found. Please add cattle in Profile first.');
                 }
                 return DropdownButtonFormField<String>(
                   value: _selectedCattleId,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    labelText: 'Choose Animal',
+                    label: TranslatedText('Choose Animal', style: TextStyle(color: Colors.grey)),
+                    // labelText: 'Choose Animal', // Removed string label
                   ),
                   items: cattleList.map((cattle) {
                     return DropdownMenuItem(
@@ -276,9 +277,20 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${index + 1}. ${_questions[index]}',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${index + 1}. ',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            Expanded(
+                              child: TranslatedText(
+                                _questions[index],
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -297,7 +309,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                 TextField(
                   controller: _symptomsController,
                   decoration: const InputDecoration(
-                    labelText: 'Additional Symptoms',
+                    label: TranslatedText('Additional Symptoms', style: TextStyle(color: Colors.grey)),
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -324,7 +336,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
           children: [
             Icon(icon, size: 40, color: const Color(0xFF2D5016)),
             const SizedBox(height: 8),
-            Text(label),
+            TranslatedText(label),
           ],
         ),
       ),
@@ -334,7 +346,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
   Widget _buildChoiceChip(int index, String option) {
     final isSelected = _answers[index] == option;
     return ChoiceChip(
-      label: Text(option),
+      label: TranslatedText(option),
       selected: isSelected,
       onSelected: (selected) {
         if (selected) _updateAnswer(index, option);

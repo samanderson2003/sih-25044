@@ -172,15 +172,15 @@ class _HomeScreenState extends State<HomeScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Center(
                             child: SegmentedButton<bool>(
-                              segments: const [
+                              segments: [
                                 ButtonSegment<bool>(
                                     value: true, 
-                                    label: Text('Crops'), 
+                                    label: TranslatedText('Crops'), 
                                     icon: Icon(Icons.grass)
                                 ),
                                 ButtonSegment<bool>(
                                     value: false, 
-                                    label: Text('Livestock'), 
+                                    label: TranslatedText('Livestock'), 
                                     icon: Icon(Icons.pets)
                                 ),
                               ],
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(width: 4),
                             Flexible(
-                              child: Text(
+                              child: TranslatedText(
                                 weather.location,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -464,37 +464,43 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ],
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.thermostat,
-                            color: Colors.orange.shade400,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              TranslatedText(
-                                'Soil Temp',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              Icon(
+                                Icons.thermostat,
+                                color: Colors.orange.shade400,
+                                size: 24,
                               ),
-                              Text(
-                                '+${(weather.temperature - 5).toInt()}°C',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: mainTextColor,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TranslatedText(
+                                      'Soil Temp',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      '+${(weather.temperature - 5).toInt()}°C',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: mainTextColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -523,27 +529,33 @@ class _HomeScreenState extends State<HomeScreen>
                             color: Colors.blue.shade400,
                             size: 24,
                           ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TranslatedText(
-                                'Humidity',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w500,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TranslatedText(
+                                  'Humidity',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${weather.humidity.toInt()}%',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: mainTextColor,
+                                Text(
+                                  '${weather.humidity.toInt()}%',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: mainTextColor,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -755,13 +767,33 @@ class _HomeScreenState extends State<HomeScreen>
                                                 color: livestock.themeColor.withOpacity(0.1),
                                                 borderRadius: BorderRadius.circular(20),
                                             ),
-                                            child: Text(
-                                                'Age: ${stage.ageInMonths} Months',
-                                                style: TextStyle(
+                                            child: Row(
+                                              children: [
+                                                const TranslatedText(
+                                                  'Age: ',
+                                                  style: TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
-                                                    color: livestock.themeColor
+                                                    color: Color(0xFF2D5016), // livestock.themeColor (hardcoded to green for simplicity in rewrite or need to access outer scope variable?)
+                                                  ),
                                                 ),
+                                                Text(
+                                                  '${stage.ageInMonths}',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: livestock.themeColor,
+                                                  ),
+                                                ),
+                                                const TranslatedText(
+                                                  ' Months',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF2D5016),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                          ),
                                          const Spacer(),
@@ -956,11 +988,11 @@ class _HomeScreenState extends State<HomeScreen>
               final isRecommended =
                   suitability != SeasonSuitability.notRecommended;
 
-              String dateRange = "";
+              String dateSuffix = "";
               if (suitability == SeasonSuitability.highCompatibility) {
-                dateRange = "${monthName.substring(0, 3)} 1 - 15";
+                dateSuffix = " 1 - 15";
               } else if (suitability == SeasonSuitability.normal) {
-                dateRange = "${monthName.substring(0, 3)} 1 - 30";
+                dateSuffix = " 1 - 30";
               }
 
               return Padding(
@@ -999,15 +1031,26 @@ class _HomeScreenState extends State<HomeScreen>
                       if (isRecommended)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: Text(
-                            dateRange,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  controller.selectedCrop?.themeColor ??
-                                  Colors.green,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TranslatedText(
+                                monthName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: controller.selectedCrop?.themeColor ?? Colors.green,
+                                ),
+                              ),
+                              Text(
+                                dateSuffix,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: controller.selectedCrop?.themeColor ?? Colors.green,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       const SizedBox(height: 6),
@@ -1208,7 +1251,7 @@ class _HomeScreenState extends State<HomeScreen>
               final stage = stages[index];
 
               // Calculate month-based date range from days after planting
-              String dateRange = _calculateMonthDateRange(
+              final dateData = _calculateMonthDateRange(
                 controller,
                 stage.daysAfterPlanting,
               );
@@ -1250,13 +1293,26 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: Text(
-                          dateRange,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: crop.themeColor,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TranslatedText(
+                              dateData['month']!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: crop.themeColor,
+                              ),
+                            ),
+                            Text(
+                              dateData['suffix']!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: crop.themeColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1298,8 +1354,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Helper function to calculate month-based date range from days after planting
-  String _calculateMonthDateRange(
+  // Return a Map with 'month' and 'suffix' for translation
+  Map<String, String> _calculateMonthDateRange(
     HomeController controller,
     int daysAfterPlanting,
   ) {
@@ -1313,18 +1369,18 @@ class _HomeScreenState extends State<HomeScreen>
     // Format the date range
     const monthNames = [
       '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
+      'January', // Use full names for translation dictionary matching
+      'February',
+      'March',
+      'April',
       'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     // Calculate start and end dates for a ~10 day period
@@ -1336,10 +1392,12 @@ class _HomeScreenState extends State<HomeScreen>
     int startDay = startDate.day;
     int endDay = endDate.day;
 
+    String monthName = monthNames[startDate.month];
+
     // If end date goes to next month, cap it at month end
     if (endDate.month != startDate.month) {
       endDay = daysInMonth;
-      return "${monthNames[startDate.month]} $startDay - $endDay";
+      return {'month': monthName, 'suffix': " $startDay - $endDay"};
     }
 
     // If end day exceeds month days, cap it
@@ -1347,7 +1405,7 @@ class _HomeScreenState extends State<HomeScreen>
       endDay = daysInMonth;
     }
 
-    return "${monthNames[startDate.month]} $startDay - $endDay";
+    return {'month': monthName, 'suffix': " $startDay - $endDay"};
   }
 
   // Find the best planting month (high compatibility month)

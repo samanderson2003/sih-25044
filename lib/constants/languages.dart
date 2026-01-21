@@ -13,7 +13,19 @@ class AppLanguages {
     nativeName: 'ଓଡ଼ିଆ',
   );
 
-  static const List<Language> supportedLanguages = [english, odia];
+  static const Language hindi = Language(
+    code: 'hi',
+    name: 'Hindi',
+    nativeName: 'हिंदी',
+  );
+
+  static const Language tamil = Language(
+    code: 'ta',
+    name: 'Tamil',
+    nativeName: 'தமிழ்',
+  );
+
+  static const List<Language> supportedLanguages = [english, odia, hindi, tamil];
 
   static Language getLanguageByCode(String code) {
     return supportedLanguages.firstWhere(
