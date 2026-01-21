@@ -1,3 +1,28 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class ManualAlert {
+  final String message;
+  final String type; // 'Crop', 'Livestock', 'General'
+  final double radius;
+  final DateTime timestamp;
+
+  ManualAlert({
+    required this.message,
+    required this.type,
+    required this.radius,
+    required this.timestamp,
+  });
+
+  factory ManualAlert.fromMap(Map<String, dynamic> map) {
+    return ManualAlert(
+      message: map['message'] ?? '',
+      type: map['type'] ?? 'General',
+      radius: (map['radius'] as num?)?.toDouble() ?? 500.0,
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
 class FarmerProfile {
   final String id;
   final String name;
@@ -12,9 +37,13 @@ class FarmerProfile {
   final String soilHealthStatus;
   final String irrigationMethod;
   final List<String> riskAlerts;
+  final List<ManualAlert> structuredAlerts; // New structured alerts
   final CropPredictionData? latestPrediction;
   final String? profileImage;
   final bool isFollowing;
+
+  // Livestock data
+  final int livestockCount;
 
   // Satellite-based crop health monitoring
   final bool? stressDetected;
@@ -30,6 +59,11 @@ class FarmerProfile {
   final List<String>? recommendations;
   final String? disclaimer;
 
+  // Computed properties for filtering
+  bool get hasCrop => currentCrop.isNotEmpty && currentCrop != 'Not Specified';
+  bool get hasLivestock => livestockCount > 0;
+  bool get hasRiskAlerts => riskAlerts.isNotEmpty || structuredAlerts.isNotEmpty;
+
   FarmerProfile({
     required this.id,
     required this.name,
@@ -44,9 +78,11 @@ class FarmerProfile {
     required this.soilHealthStatus,
     required this.irrigationMethod,
     this.riskAlerts = const [],
+    this.structuredAlerts = const [],
     this.latestPrediction,
     this.profileImage,
     this.isFollowing = false,
+    this.livestockCount = 0,
     this.stressDetected,
     this.healthStatus,
     this.stressType,
@@ -75,11 +111,17 @@ class FarmerProfile {
       soilHealthStatus: json['soilHealthStatus'] ?? '',
       irrigationMethod: json['irrigationMethod'] ?? '',
       riskAlerts: List<String>.from(json['riskAlerts'] ?? []),
+      structuredAlerts: json['structuredAlerts'] != null
+          ? (json['structuredAlerts'] as List)
+              .map((e) => ManualAlert.fromMap(e as Map<String, dynamic>))
+              .toList()
+          : [],
       latestPrediction: json['latestPrediction'] != null
           ? CropPredictionData.fromJson(json['latestPrediction'])
           : null,
       profileImage: json['profileImage'],
       isFollowing: json['isFollowing'] ?? false,
+      livestockCount: json['livestockCount'] ?? 0,
       stressDetected: json['stressDetected'],
       healthStatus: json['healthStatus'],
       stressType: json['stressType'],
@@ -113,9 +155,16 @@ class FarmerProfile {
       'soilHealthStatus': soilHealthStatus,
       'irrigationMethod': irrigationMethod,
       'riskAlerts': riskAlerts,
+      'structuredAlerts': structuredAlerts.map((e) => {
+        'message': e.message,
+        'type': e.type,
+        'radius': e.radius,
+        'timestamp': Timestamp.fromDate(e.timestamp),
+      }).toList(),
       'latestPrediction': latestPrediction?.toJson(),
       'profileImage': profileImage,
       'isFollowing': isFollowing,
+      'livestockCount': livestockCount,
       'stressDetected': stressDetected,
       'healthStatus': healthStatus,
       'stressType': stressType,

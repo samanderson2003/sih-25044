@@ -35,6 +35,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                 return GoogleMap(
                   initialCameraPosition: _initialPosition,
                   markers: controller.markers,
+                  circles: controller.circles,
                   onMapCreated: controller.setMapController,
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
@@ -246,6 +247,104 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
               ),
             ),
 
+            // Filter Chips Bar
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 55,
+              left: 0,
+              right: 0,
+              child: Consumer<ConnectionsController>(
+                builder: (context, controller, _) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Filter Chips Row
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildFilterChip(
+                                context,
+                                controller,
+                                MapFilterType.all,
+                                '🌍 All',
+                                Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                context,
+                                controller,
+                                MapFilterType.crop,
+                                '🌾 Crops',
+                                Colors.green,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                context,
+                                controller,
+                                MapFilterType.livestock,
+                                '🐄 Livestock',
+                                Colors.purple,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                context,
+                                controller,
+                                MapFilterType.alerts,
+                                '⚠️ Alerts',
+                                Colors.orange,
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Alert Radius Slider (only shown when alerts filter is selected)
+                        if (controller.selectedFilter == MapFilterType.alerts) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.radar, size: 16, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Radius: ${controller.alertRadius.toStringAsFixed(0)} km',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Expanded(
+                                child: Slider(
+                                  value: controller.alertRadius,
+                                  min: 1,
+                                  max: 50,
+                                  divisions: 49,
+                                  activeColor: Colors.orange,
+                                  inactiveColor: Colors.orange.withOpacity(0.3),
+                                  onChanged: (value) {
+                                    controller.setAlertRadius(value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
             // FarmBot Chatbot Button
             Positioned(
               bottom: 40,
@@ -361,6 +460,189 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
             ),
           ],
         ),
+        floatingActionButton: Consumer<ConnectionsController>(
+          builder: (context, controller, _) {
+            if (controller.isLoading) return const SizedBox.shrink();
+            
+            return FloatingActionButton.extended(
+              onPressed: () => _showMarkAlertDialog(context, controller),
+              backgroundColor: Colors.redAccent,
+              icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+              label: const Text('Mark Alert', style: TextStyle(color: Colors.white)),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+    BuildContext context,
+    ConnectionsController controller,
+    MapFilterType filterType,
+    String label,
+    Color color,
+  ) {
+    final isSelected = controller.selectedFilter == filterType;
+    return GestureDetector(
+      onTap: () => controller.setFilter(filterType),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  void _showMarkAlertDialog(BuildContext context, ConnectionsController controller) {
+    final alertController = TextEditingController();
+    String selectedType = 'General';
+    double radius = 500;
+    
+    // Determine available types based on filter
+    List<String> availableTypes = ['General', 'Crop', 'Livestock'];
+    if (controller.selectedFilter == MapFilterType.crop) {
+      availableTypes = ['Crop'];
+      selectedType = 'Crop';
+    } else if (controller.selectedFilter == MapFilterType.livestock) {
+      availableTypes = ['Livestock'];
+      selectedType = 'Livestock';
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Mark Risk Alert'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Report an issue at your location to warn other farmers.',
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Alert Type Dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    decoration: const InputDecoration(
+                      labelText: 'Alert Type',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    items: availableTypes.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Row(
+                          children: [
+                            Icon(
+                              type == 'Crop' ? Icons.grass : 
+                              type == 'Livestock' ? Icons.pets : Icons.warning_amber,
+                              color: type == 'Crop' ? Colors.green : 
+                                     type == 'Livestock' ? Colors.purple : Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(type),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => selectedType = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+        
+                  TextField(
+                    controller: alertController,
+                    decoration: const InputDecoration(
+                      labelText: 'Alert Message',
+                      hintText: 'e.g., Pest Attack, Disease',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.edit),
+                    ),
+                    maxLines: 2,
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  Text(
+                    'Alert Radius: ${radius.toInt()}m',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Slider(
+                    value: radius,
+                    min: 100,
+                    max: 5000,
+                    divisions: 49,
+                    label: '${radius.toInt()}m',
+                    activeColor: selectedType == 'Crop' ? Colors.green : 
+                                 selectedType == 'Livestock' ? Colors.purple : Colors.orange,
+                    onChanged: (value) {
+                      setState(() => radius = value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (alertController.text.trim().isNotEmpty) {
+                    controller.markRiskAlert(
+                      alertController.text,
+                      selectedType,
+                      radius,
+                    );
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Alert marked ($selectedType) with ${radius.toInt()}m radius!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5016)),
+                child: const Text('Mark Alert', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
