@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../controller/chat_controller.dart';
 import '../model/chat_message.dart';
@@ -509,36 +510,107 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Future<void> _downloadFile(BuildContext context, String url, String suggestedName) async {
+    // Show immediate feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Starting download...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
     try {
+      // 1. Request Storage Permission
+      if (Platform.isAndroid) {
+         // Check Android version indirectly via permission status or just try
+         // On Android 13 (SDK 33+), READ_EXTERNAL_STORAGE/WRITE_EXTERNAL_STORAGE are deprecated.
+         // We usually don't need runtime permission to write to public Downloads on modern Android.
+         
+         var status = await Permission.storage.status;
+         
+         // If denied/restricted, and we are on an older permission model, request it.
+         // If we are on Android 13+, this might return denied even if we can write.
+         // A simple heuristic: if it's explicitly denied, try to request.
+         if (!status.isGranted) {
+            final result = await Permission.storage.request();
+            if (!result.isGranted) {
+               // Only block if we truly believe we need it. 
+               // For now, we will try to proceed to the write step even if denied,
+               // catching the permission exception there if it actually fails.
+               // This works around Android 13 returning 'denied' for a permission that doesn't exist.
+            }
+         }
+      }
+
       final uri = Uri.parse(url);
       final resp = await http.get(uri);
+      
       if (resp.statusCode != 200) {
-        // Fallback: try opening the URL in external browser so user can download manually
-        final opened = await launchUrl(uri);
-        if (!opened) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to download file.')));
+        throw Exception('Server returned ${resp.statusCode}');
+      }
+
+      // 2. Determine Public Download Path
+      Directory? downloadsDir;
+      if (Platform.isAndroid) {
+        // Direct path to public Downloads folder
+        downloadsDir = Directory('/storage/emulated/0/Download');
+      } else {
+        // iOS/Fallback
+        downloadsDir = await getApplicationDocumentsDirectory();
+      }
+
+      if (!downloadsDir.existsSync()) {
+        downloadsDir = await getExternalStorageDirectory(); // Fallback to app specific
+      }
+      
+      // 3. Save File
+      // Sanitize filename to avoid path traversal
+      final safeName = suggestedName.replaceAll(RegExp(r'[^\w\s\.-]'), '');
+      String savePath = '${downloadsDir!.path}/$safeName';
+      
+      // Handle duplicate names
+      int counter = 1;
+      while (await File(savePath).exists()) {
+        final dotIndex = safeName.lastIndexOf('.');
+        if (dotIndex != -1) {
+             final name = safeName.substring(0, dotIndex);
+             final ext = safeName.substring(dotIndex);
+             savePath = '${downloadsDir.path}/${name}_$counter$ext';
+        } else {
+             savePath = '${downloadsDir.path}/${safeName}_$counter';
         }
-        return;
+        counter++;
       }
 
-      Directory? baseDir;
-      try {
-        baseDir = await getExternalStorageDirectory();
-      } catch (_) {
-        baseDir = null;
-      }
-      baseDir ??= await getApplicationDocumentsDirectory();
-
-      final downloadsDir = Directory('${baseDir.path}${Platform.pathSeparator}CommunityChatDownloads');
-      if (!await downloadsDir.exists()) await downloadsDir.create(recursive: true);
-
-      final file = File('${downloadsDir.path}${Platform.pathSeparator}$suggestedName');
+      final file = File(savePath);
       await file.writeAsBytes(resp.bodyBytes);
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to ${file.path}')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File saved to Downloads: ${file.path.split('/').last}'),
+            action: SnackBarAction(
+              label: 'OPEN',
+              onPressed: () {
+                 // Try to open the file
+              },
+            ),
+            duration: const Duration(seconds: 4),
+          )
+        );
+      }
+      
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      print('Download error: $e');
+      if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: ${e.toString()}')));
+      }
+      
+      // Attempt fallback to browser
+      try {
+         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } catch (_) {}
     }
+
   }
 }
 
@@ -850,17 +922,19 @@ class _MessageInputField extends StatelessWidget {
                   child: IconButton(
                     icon: controller.isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 24,
+                            height: 24,
                             child: CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
                         : const Icon(Icons.send, color: Colors.white),
-                    onPressed: controller.isLoading || (controller.messageController.text.isEmpty && !isMediaAttached)
-                        ? null 
-                        : controller.sendMessage,
+                    onPressed: controller.isLoading
+                        ? null
+                        : () {
+                            controller.sendMessage();
+                          },
                   ),
                 ),
               ],

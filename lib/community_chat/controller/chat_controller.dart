@@ -9,13 +9,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import '../model/chat_message.dart';
-import 'package:path_provider/path_provider.dart'; 
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart'; 
 
 class ChatController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   
   bool _isRecording = false;
   DateTime? _recordingStartTime;
@@ -28,12 +30,14 @@ class ChatController extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
+  String _debugStatus = ''; // For UI feedback on hang location
   
   // Timer for duration update
   Timer? _recordingTimer;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String get debugStatus => _debugStatus; // Getter for UI
   User? get currentUser => _auth.currentUser;
   String? get currentUserId => _auth.currentUser?.uid;
   bool get isRecording => _isRecording; 
@@ -52,52 +56,7 @@ class ChatController extends ChangeNotifier {
     return null;
   }
 
-  Future<void> _writeSilenceWav(String path, int seconds,
-      {int sampleRate = 16000, int bitsPerSample = 16, int channels = 1}) async {
-    final numSamples = sampleRate * seconds;
-    final bytesPerSample = (bitsPerSample / 8).toInt();
-    final dataByteLength = numSamples * channels * bytesPerSample;
-
-    final header = BytesBuilder();
-
-    void writeString(String s) => header.add(s.codeUnits);
-    void writeIntLE(int value, int byteCount) {
-      final b = List<int>.generate(byteCount, (i) => (value >> (8 * i)) & 0xFF);
-      header.add(b);
-    }
-
-    // RIFF header
-    writeString('RIFF');
-    writeIntLE(36 + dataByteLength, 4); // file size - 8
-    writeString('WAVE');
-
-    // fmt chunk
-    writeString('fmt ');
-    writeIntLE(16, 4); // PCM
-    writeIntLE(1, 2); // audio format = 1 (PCM)
-    writeIntLE(channels, 2);
-    writeIntLE(sampleRate, 4);
-    final byteRate = sampleRate * channels * bytesPerSample;
-    writeIntLE(byteRate, 4);
-    final blockAlign = channels * bytesPerSample;
-    writeIntLE(blockAlign, 2);
-    writeIntLE(bitsPerSample, 2);
-
-    // data chunk
-    writeString('data');
-    writeIntLE(dataByteLength, 4);
-
-    // PCM data (silence)
-    final data = Uint8List(dataByteLength);
-    // For 16-bit PCM, silence is 0x00 0x00 per sample; data already zeroed.
-
-    final fileBytes = <int>[];
-    fileBytes.addAll(header.toBytes());
-    fileBytes.addAll(data);
-
-    final f = File(path);
-    await f.writeAsBytes(fileBytes, flush: true);
-  }
+  // Removed _writeSilenceWav as we now record real audio
   
   ChatController() {
     // Initialize controller
@@ -158,25 +117,46 @@ class ChatController extends ChangeNotifier {
     final fileName = '$storageDir/${user.uid}/${DateTime.now().millisecondsSinceEpoch}_${fileType}.${fileExtension}';
     final storageRef = _storage.ref().child(fileName);
 
+    print('DEBUG: Starting upload for $fileType...');
     _isLoading = true;
+    _debugStatus = 'Starting upload for $fileType...';
     notifyListeners();
     
     String? downloadUrl;
     try {
-      await storageRef.putFile(file); 
-      downloadUrl = await storageRef.getDownloadURL();
+      debugPrint('DEBUG: putting file to storage: $fileName');
+      _debugStatus = 'Uploading to Storage (putFile)...';
+      notifyListeners();
+      
+      // Added timeout
+      await storageRef.putFile(file).timeout(const Duration(seconds: 15)); 
+      
+      debugPrint('DEBUG: Upload complete. Getting download URL...');
+      _debugStatus = 'Getting Download URL...';
+      notifyListeners();
+      
+      downloadUrl = await storageRef.getDownloadURL().timeout(const Duration(seconds: 15));
+      debugPrint('DEBUG: Download URL: $downloadUrl');
       
       clearAllAttachments();
       
       await _sendMessage(imageUrl: downloadUrl, isVoice: fileType == 'voice');
+    } on TimeoutException catch (_) {
+      _errorMessage = 'Upload timed out. Check internet connection.';
+      _debugStatus = 'Timeout Error';
+      debugPrint('DEBUG: Upload Timeout');
     } on FirebaseException catch (e) {
-      print('Firebase Upload Error: ${e.code} - ${e.message}');
-      _errorMessage = 'Failed to upload $fileType: Please check storage rules or try again.';
+      debugPrint('Firebase Upload Error: ${e.code} - ${e.message}');
+      _errorMessage = 'Upload failed: ${e.message} (${e.code})';
+      _debugStatus = 'Upload Failed!';
     } catch (e) {
-      print('General Upload Error: $e');
+      debugPrint('General Upload Error: $e');
       _errorMessage = 'An unexpected error occurred during $fileType upload.';
+      _debugStatus = 'Error: $e';
     } finally {
+      debugPrint('DEBUG: Upload finally block reached. resetting isLoading.');
       _isLoading = false;
+      _debugStatus = '';
       notifyListeners();
     }
   }
@@ -196,10 +176,12 @@ class ChatController extends ChangeNotifier {
 
     _isLoading = true;
     _errorMessage = null;
+    _debugStatus = 'Preparing message...';
     notifyListeners();
 
     try {
       final displayName = user.displayName ?? 'Anonymous';
+      print('DEBUG: Preparing message to send...');
       
       String textContent = messageText;
       if (isVoice) {
@@ -215,25 +197,48 @@ class ChatController extends ChangeNotifier {
         imageUrl: imageUrl ?? fileUrl,
       );
 
-      await _firestore.collection('community_chat').add(message.toMap());
+      debugPrint('DEBUG: Adding message to Firestore collection...');
+      _debugStatus = 'Saving to Firestore...';
+      notifyListeners();
+      
+      // Added timeout
+      await _firestore.collection('community_chat').add(message.toMap()).timeout(const Duration(seconds: 15));
+      debugPrint('DEBUG: Message added to Firestore!');
+      _debugStatus = 'Sent!';
+      
       messageController.clear();
       clearAllAttachments();
+    } on TimeoutException catch (_) {
+       _errorMessage = 'Sending timed out. Check internet connection.';
+       _debugStatus = 'Timeout Error';
+       debugPrint('DEBUG: Firestore Timeout');
     } catch (e) {
+      debugPrint('DEBUG: Error sending message: $e');
       _errorMessage = 'Failed to send message: $e';
+      _debugStatus = 'Send Failed: $e';
     } finally {
+      debugPrint('DEBUG: sendMessage finally block. Loading = false');
       _isLoading = false;
+      _debugStatus = '';
       notifyListeners();
     }
   }
 
   Future<void> sendMessage() async {
+    debugPrint('DEBUG: sendMessage called. Checking attachments...');
+    debugPrint('DEBUG: Attachments state -> Voice: $_simulatedVoicePath, Image: $_selectedImagePath, File: $_selectedFilePath'); // Trace state
+    
     if (_simulatedVoicePath != null) {
+      debugPrint('DEBUG: Sending simulated voice: $_simulatedVoicePath');
       await _uploadMedia(_simulatedVoicePath!, 'voice');
     } else if (_selectedImagePath != null) {
+       debugPrint('DEBUG: Sending image: $_selectedImagePath');
       await _uploadMedia(_selectedImagePath!, 'image');
     } else if (_selectedFilePath != null) {
+      debugPrint('DEBUG: Sending file: $_selectedFilePath');
       await _uploadMedia(_selectedFilePath!, 'file');
     } else {
+      debugPrint('DEBUG: Sending text message...');
       await _sendMessage();
     }
   }
@@ -302,71 +307,77 @@ class ChatController extends ChangeNotifier {
   
   Future<void> toggleRecording() async {
     if (_isRecording) {
-      // --- STOP RECORDING / SAVE FILE (Simulated) ---
-      _isRecording = false;
-      _recordingTimer?.cancel();
-      
-      // Simulate saving an audio file (e.g., .m4a)
-      final tempDir = await getTemporaryDirectory();
-      final durationSecs = DateTime.now().difference(_recordingStartTime!).inSeconds;
-      final safeDuration = durationSecs > 0 ? durationSecs : 1;
-      _simulatedVoicePath = '${tempDir.path}/recorded_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+      // --- STOP RECORDING ---
+      try {
+        final path = await _audioRecorder.stop();
+        _isRecording = false;
+        _recordingTimer?.cancel();
 
-      // Create a small silent WAV file matching the recorded duration so players can play it.
-      await _writeSilenceWav(_simulatedVoicePath!, safeDuration);
-      
-      final durationText = recordingDuration ?? '00:00';
-      _errorMessage = 'Recording stopped ($durationText). Press SEND to upload!';
-      
-      // Clear other attachments but keep the simulated voice path
-      _selectedImagePath = null;
-      _selectedFilePath = null;
-      
-      messageController.text = ''; // Clear input text for a clean send
-      
-      notifyListeners();
-
+        if (path != null) {
+          _simulatedVoicePath = path;
+          
+          final durationText = recordingDuration ?? '00:00';
+          _errorMessage = 'Recording stopped ($durationText). Press SEND to upload!';
+          
+          // Clear other attachments logic
+          _selectedImagePath = null;
+          _selectedFilePath = null;
+          messageController.text = ''; 
+          notifyListeners();
+        }
+      } catch (e) {
+        _errorMessage = 'Failed to stop recording: $e';
+        _isRecording = false;
+        notifyListeners();
+      }
     } else {
       // --- START RECORDING ---
       try {
-        final micStatus = await Permission.microphone.request();
-        if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
-          _errorMessage = 'Microphone permission denied.';
+        print('DEBUG: Attempting to start recording...');
+        
+        final hasPermission = await _audioRecorder.hasPermission();
+        print('DEBUG: Permission check result: $hasPermission');
+
+        if (hasPermission) {
+          // Reset attachments
+          clearAllAttachments();
+
+          final tempDir = await getTemporaryDirectory();
+          final path = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          print('DEBUG: Recording path: $path');
+
+          // Start recording (v5 API)
+          await _audioRecorder.start(const RecordConfig(), path: path);
+          print('DEBUG: Recording started successfully via plugin');
+          
+          _isRecording = true;
+          _recordingStartTime = DateTime.now();
+          
+          // Timer for UI duration
+          _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+             if (isRecording) {
+               final dur = recordingDuration ?? '00:00';
+               messageController.text = 'Recording $dur';
+               print('DEBUG: Recording tick: $dur');
+               notifyListeners(); 
+             } else {
+               timer.cancel();
+             }
+          });
+
+          messageController.text = 'Recording 00:00';
+          _errorMessage = 'Recording started... Tap again to stop.';
           notifyListeners();
-          return;
+        } else {
+          print('DEBUG: Microphone permission denied by plugin/system');
+          _errorMessage = 'Microphone permission required.';
+          notifyListeners();
         }
-
-        // Reset all attachments
-        clearAllAttachments(); 
-
-        // Start recording state and timer
-        _isRecording = true;
-        _recordingStartTime = DateTime.now();
-        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-           if (isRecording) {
-             // Update the visible recording text each second so UI shows live seconds
-             final dur = recordingDuration ?? '00:00';
-             messageController.text = 'Recording $dur';
-             notifyListeners(); // Force UI update for duration
-           } else {
-             timer.cancel();
-           }
-        });
-
-        messageController.text = 'Recording 00:00';
-        _errorMessage = 'Recording started... Tap again to stop.';
-        notifyListeners();
-
-        // Optional: Auto-stop simulation after a long time
-        await Future.delayed(const Duration(minutes: 5)); 
-        if (_isRecording) {
-           await toggleRecording(); // Automatically stop
-        }
-
-      } catch (e) {
+      } catch (e, stack) {
+        print('DEBUG: EXCEPTION in start recording: $e');
+        print('DEBUG: Stack trace: $stack');
         _errorMessage = 'Failed to start recording: $e';
         _isRecording = false;
-        _recordingTimer?.cancel();
         notifyListeners();
       }
     }
@@ -408,6 +419,7 @@ class ChatController extends ChangeNotifier {
   @override
   void dispose() {
     _recordingTimer?.cancel();
+    _audioRecorder.dispose();
     messageController.dispose();
     super.dispose();
   }

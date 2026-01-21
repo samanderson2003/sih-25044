@@ -10,9 +10,12 @@ class TermsConditionsController {
 
   // Save terms acceptance to Firestore
   Future<Map<String, dynamic>> acceptTerms() async {
+    try {
+      // 1. Cache locally FIRST (Critical for offline/persistence)
       // 1. Cache locally FIRST (Critical for offline/persistence)
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('terms_accepted', true);
+      final success = await prefs.setBool('terms_accepted', true);
+      debugPrint('DEBUG: Saved T&C to local prefs: $success');
 
       final user = _auth.currentUser;
       if (user != null) {
@@ -45,12 +48,18 @@ class TermsConditionsController {
     }
   }
 
+
   // Check if terms are already accepted
   Future<bool> hasAcceptedTerms() async {
     try {
       // 1. Check local cache FIRST (Fast path)
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool('terms_accepted') == true) {
+      await prefs.reload(); // Force reload from disk
+      final localStatus = prefs.getBool('terms_accepted');
+      debugPrint('DEBUG: T&C Local Prefs: $localStatus');
+      
+      if (localStatus == true) {
+        debugPrint('DEBUG: Terms accepted locally.');
         return true;
       }
 
