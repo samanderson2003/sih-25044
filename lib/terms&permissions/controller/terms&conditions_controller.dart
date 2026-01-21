@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/terms&conditions_model.dart';
 
 class TermsConditionsController {
@@ -9,32 +10,50 @@ class TermsConditionsController {
 
   // Save terms acceptance to Firestore
   Future<Map<String, dynamic>> acceptTerms() async {
-    try {
+      // 1. Cache locally FIRST (Critical for offline/persistence)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('terms_accepted', true);
+
       final user = _auth.currentUser;
-      if (user == null) {
-        return {'success': false, 'message': 'User not authenticated'};
+      if (user != null) {
+          // 2. Try to sync with Firestore (Best effort)
+          try {
+            final termsModel = TermsConditionsModel(
+              isAccepted: true,
+              acceptedAt: DateTime.now(),
+              userId: user.uid,
+            );
+            await _firestore.collection('users').doc(user.uid).set({
+              'onboarding': {'termsAccepted': termsModel.toJson()},
+            }, SetOptions(merge: true));
+          } catch (e) {
+            print('Warning: Failed to sync terms to Firestore: $e');
+            // We suppress this error because local acceptance is enough for access
+          }
       }
-
-      final termsModel = TermsConditionsModel(
-        isAccepted: true,
-        acceptedAt: DateTime.now(),
-        userId: user.uid,
-      );
-
-      // Use set with merge to create the field if it doesn't exist
-      await _firestore.collection('users').doc(user.uid).set({
-        'onboarding': {'termsAccepted': termsModel.toJson()},
-      }, SetOptions(merge: true));
 
       return {'success': true, 'message': 'Terms accepted successfully'};
     } catch (e) {
-      return {'success': false, 'message': 'Error accepting terms: $e'};
+      // Even if something crashes, try to save locally
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('terms_accepted', true);
+        return {'success': true, 'message': 'Terms accepted (Offline mode)'};
+      } catch (_) {
+         return {'success': false, 'message': 'Error accepting terms: $e'};
+      }
     }
   }
 
   // Check if terms are already accepted
   Future<bool> hasAcceptedTerms() async {
     try {
+      // 1. Check local cache FIRST (Fast path)
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('terms_accepted') == true) {
+        return true;
+      }
+
       final user = _auth.currentUser;
       if (user == null) {
         print('DEBUG: No user logged in');
@@ -69,6 +88,11 @@ class TermsConditionsController {
 
       final isAccepted = termsData['isAccepted'] ?? false;
       print('DEBUG: Terms accepted status: $isAccepted');
+      
+      // Update cache if true
+      if (isAccepted) {
+        await prefs.setBool('terms_accepted', true);
+      }
       return isAccepted;
     } catch (e) {
       print('DEBUG: Error checking terms: $e');

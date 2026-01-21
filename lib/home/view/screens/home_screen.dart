@@ -5,7 +5,8 @@ import 'package:timelines_plus/timelines_plus.dart';
 import 'package:lottie/lottie.dart';
 import '../../controller/home_controller.dart';
 import '../../model/crop_model.dart';
-import 'calender_full_screen.dart';
+import '../../model/livestock_model.dart';
+// import 'calender_full_screen.dart';
 import 'crop_plan_screen.dart';
 import '../../../widgets/translated_text.dart';
 
@@ -87,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen>
           elevation: 0,
           backgroundColor: const Color(0xFFF8F6F0),
           surfaceTintColor: Colors.transparent,
+          /*
           leading: IconButton(
             icon: const Icon(
               Icons.calendar_month,
@@ -105,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen>
               );
             },
           ),
+          */
           centerTitle: true,
           title: const TranslatedText(
             'Crop Management',
@@ -163,23 +166,71 @@ class _HomeScreenState extends State<HomeScreen>
                     _buildWeatherSection(controller),
 
                     const SizedBox(height: 16),
+                    
+                    // Toggle Switch (Crop / Livestock)
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Center(
+                            child: SegmentedButton<bool>(
+                              segments: const [
+                                ButtonSegment<bool>(
+                                    value: true, 
+                                    label: Text('Crops'), 
+                                    icon: Icon(Icons.grass)
+                                ),
+                                ButtonSegment<bool>(
+                                    value: false, 
+                                    label: Text('Livestock'), 
+                                    icon: Icon(Icons.pets)
+                                ),
+                              ],
+                              selected: {controller.isCropView},
+                              onSelectionChanged: (Set<bool> newSelection) {
+                                controller.toggleView(newSelection.first);
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                                  (Set<MaterialState> states) {
+                                    if (states.contains(MaterialState.selected)) {
+                                      return const Color(0xFF2D5016);
+                                    }
+                                    return Colors.transparent;
+                                  },
+                                ),
+                                foregroundColor: MaterialStateProperty.resolveWith<Color>(
+                                  (Set<MaterialState> states) {
+                                    if (states.contains(MaterialState.selected)) {
+                                      return Colors.white;
+                                    }
+                                    return Colors.black;
+                                  },
+                                ),
+                              ),
+                            ),
+                       ),
+                    ),
+
+                    const SizedBox(height: 24),
 
                     // Crop Selection Header
+                    // Crop/Livestock Selection Header
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const TranslatedText(
-                            'Select Crop',
-                            style: TextStyle(
+                          TranslatedText(
+                            controller.isCropView ? 'Select Crop' : 'Select Livestock',
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF212121),
                             ),
                           ),
                           TranslatedText(
-                            '${controller.crops.length} crops',
+                            controller.isCropView 
+                                ? '${controller.crops.length} crops'
+                                : '${controller.livestockList.length} types',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Color(0xFF9E9E9E),
@@ -191,61 +242,87 @@ class _HomeScreenState extends State<HomeScreen>
 
                     const SizedBox(height: 12),
 
-                    // Horizontal Crop Carousel with Auto-scroll
+                    // Horizontal Carousel with Auto-scroll
                     SizedBox(
                       height: 120,
-                      child: controller.crops.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Lottie.asset(
-                                    'assets/loading.json',
-                                    width: 100,
-                                    height: 100,
+                      child: controller.isCropView 
+                          ? (controller.crops.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Lottie.asset(
+                                        'assets/loading.json',
+                                        width: 100,
+                                        height: 100,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TranslatedText(
+                                        'Loading crops...',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  TranslatedText(
-                                    'Loading crops...',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
+                                )
+                              : GestureDetector(
+                                  onPanDown: (_) => _onUserScroll(),
+                                  child: PageView.builder(
+                                    controller: _pageController,
+                                    itemCount: 1000000, // Infinite scrolling
+                                    physics: const BouncingScrollPhysics(),
+                                    itemBuilder: (context, index) {
+                                      final cropIndex =
+                                          index % controller.crops.length;
+                                      final crop = controller.crops[cropIndex];
+                                      final isSelected =
+                                          controller.selectedCrop?.id == crop.id;
+  
+                                      return Center(
+                                        child: _buildCropCard(
+                                          crop,
+                                          isSelected,
+                                          controller,
+                                        ),
+                                      );
+                                    },
                                   ),
-                                ],
-                              ),
-                            )
-                          : GestureDetector(
-                              onPanDown: (_) => _onUserScroll(),
-                              child: PageView.builder(
-                                controller: _pageController,
-                                itemCount: 1000000, // Infinite scrolling
-                                physics: const BouncingScrollPhysics(),
-                                itemBuilder: (context, index) {
-                                  final cropIndex =
-                                      index % controller.crops.length;
-                                  final crop = controller.crops[cropIndex];
-                                  final isSelected =
-                                      controller.selectedCrop?.id == crop.id;
-
-                                  return Center(
-                                    child: _buildCropCard(
-                                      crop,
-                                      isSelected,
-                                      controller,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                                ))
+                          : (controller.livestockList.isEmpty 
+                              ? const Center(child: Text("No livestock info"))
+                              : Center(
+                                  child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: controller.livestockList.length,
+                                  itemBuilder: (context, index) {
+                                      final livestock = controller.livestockList[index];
+                                      final isSelected = controller.selectedLivestock?.id == livestock.id;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 16),
+                                        child: Center(
+                                          child: _buildLivestockCard(livestock, isSelected, controller)
+                                        ),
+                                      );
+                                  },
+                                ),
+                              )),    
                     ),
 
                     const SizedBox(height: 20),
 
                     // AI-Generated Lifecycle Stages Timeline
-                    if (controller.selectedCrop != null &&
-                        controller.selectedCrop!.lifecycleStages.isNotEmpty)
-                      _buildLifecycleStagesTimeline(controller),
+                    // AI-Generated Lifecycle Stages Timeline OR Livestock Care
+                    if (controller.isCropView)
+                         if (controller.selectedCrop != null &&
+                            controller.selectedCrop!.lifecycleStages.isNotEmpty)
+                          _buildLifecycleStagesTimeline(controller)
+                    else 
+                         if (controller.selectedLivestock != null)
+                             _buildLivestockCareTimeline(controller),
 
                     const SizedBox(height: 100),
                   ],
@@ -501,6 +578,7 @@ class _HomeScreenState extends State<HomeScreen>
         _onUserScroll();
       },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 75,
@@ -531,6 +609,192 @@ class _HomeScreenState extends State<HomeScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildLivestockCard(Livestock livestock, bool isSelected, HomeController controller) {
+    return GestureDetector(
+      onTap: () {
+        controller.selectLivestock(livestock);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 75,
+            height: 75,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? livestock.themeColor.withOpacity(0.15)
+                  : const Color(0xFFF5F5F5),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? livestock.themeColor : const Color(0xFFE0E0E0),
+                width: isSelected ? 3 : 2,
+              ),
+            ),
+            child: Center(
+              child: Text(livestock.icon, style: const TextStyle(fontSize: 36)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TranslatedText(
+            livestock.name,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? livestock.themeColor : const Color(0xFF424242),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLivestockCareTimeline(HomeController controller) {
+      final livestock = controller.selectedLivestock;
+      if (livestock == null) return const SizedBox.shrink();
+      
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: livestock.themeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.health_and_safety,
+                    color: livestock.themeColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TranslatedText(
+                      '${livestock.name} Care Schedule',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF212121),
+                      ),
+                    ),
+                    const TranslatedText(
+                      'Vaccination & Health Guide',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          Timeline.tileBuilder(
+            theme: TimelineThemeData(
+              nodePosition: 0,
+              color: Colors.grey.shade300,
+              connectorTheme: const ConnectorThemeData(thickness: 2.0),
+            ),
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            builder: TimelineTileBuilder.connected(
+                itemCount: livestock.lifecycleStages.length,
+                connectionDirection: ConnectionDirection.before,
+                connectorBuilder: (context, index, type) {
+                   return SolidLineConnector(
+                      color: index < livestock.lifecycleStages.length // All colored for info
+                          ? livestock.themeColor
+                          : Colors.grey.shade300,
+                   );
+                },
+                indicatorBuilder: (context, index) {
+                   return DotIndicator(
+                      color: livestock.themeColor,
+                      child: Icon(
+                          Icons.check, 
+                          color: Colors.white, 
+                          size: 14
+                      ),
+                   );
+                },
+                contentsBuilder: (context, index) {
+                  final stage = livestock.lifecycleStages[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 12, bottom: 24),
+                    child: Container(
+                         width: double.infinity,
+                         padding: const EdgeInsets.all(16),
+                         decoration: BoxDecoration(
+                           color: Colors.white,
+                           borderRadius: BorderRadius.circular(16),
+                           border: Border.all(color: Colors.grey.shade200),
+                           boxShadow: [
+                             BoxShadow(
+                               color: Colors.black.withOpacity(0.04),
+                               blurRadius: 8,
+                               offset: const Offset(0, 4),
+                             ),
+                           ],
+                         ),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                                Row(
+                                    children: [
+                                         Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                                color: livestock.themeColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                                'Age: ${stage.ageInMonths} Months',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: livestock.themeColor
+                                                ),
+                                            ),
+                                         ),
+                                         const Spacer(),
+                                         Icon(stage.iconData, color: Colors.grey.shade400, size: 20),
+                                    ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                    stage.actionTitle,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF212121)
+                                    ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                    stage.description,
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade700,
+                                        height: 1.4
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                  );
+                },
+            ),
+          ),
+        ],
+      );
   }
 
   // Original Month-based Timeline

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../model/crop_model.dart';
+import '../model/livestock_model.dart';
 import '../model/weather_model.dart';
 import '../model/daily_action_model.dart';
 import '../../prior_data/controller/farm_data_controller.dart';
@@ -17,6 +18,16 @@ class HomeController extends ChangeNotifier {
   // Available crops
   List<Crop> _crops = [];
   List<Crop> get crops => _crops;
+
+  // Livestock Data
+  bool _isCropView = true;
+  bool get isCropView => _isCropView;
+  
+  List<Livestock> _livestockList = [];
+  List<Livestock> get livestockList => _livestockList;
+
+  Livestock? _selectedLivestock;
+  Livestock? get selectedLivestock => _selectedLivestock;
 
   // User location from profile
   double? _userLatitude;
@@ -55,6 +66,7 @@ class HomeController extends ChangeNotifier {
   }
 
   Future<void> _loadUserFarmData() async {
+    _loadLivestockData(); // Load livestock data in parallel
     _isLoadingCrops = true;
     notifyListeners();
 
@@ -245,6 +257,16 @@ class HomeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleView(bool isCrop) {
+    _isCropView = isCrop;
+    notifyListeners();
+  }
+
+  void selectLivestock(Livestock livestock) {
+    _selectedLivestock = livestock;
+    notifyListeners();
+  }
+
   void selectDate(DateTime date) {
     _selectedDate = date;
     notifyListeners();
@@ -400,6 +422,111 @@ class HomeController extends ChangeNotifier {
     // Fallback to static data
     debugPrint('📋 Using static lifecycle for $cropName');
     return fallbackStages;
+  }
+
+  // --- LIVESTOCK DATA LOADING ---
+  
+  void _loadLivestockData() {
+    _livestockList = [
+      Livestock(
+        id: 'cow',
+        name: 'Cow / Cattle',
+        icon: '🐄',
+        themeColor: Colors.brown,
+        lifecycleStages: [
+           LivestockStage(
+             ageInMonths: 1,
+             stageName: 'Calf Care',
+             actionTitle: 'Colostrum Feeding',
+             description: 'Ensure calf receives colostrum within first hour of birth. Apply tincture iodine to navel.',
+             icon: 'medical',
+           ),
+           LivestockStage(
+             ageInMonths: 4,
+             stageName: 'Vaccination',
+             actionTitle: 'FMD Vaccine',
+             description: 'First dose of Foot and Mouth Disease (FMD) vaccine. Deworming required.',
+             icon: 'vaccine',
+           ),
+           LivestockStage(
+             ageInMonths: 6,
+             stageName: 'Growing Stage',
+             actionTitle: 'Dietary Supplement',
+             description: 'Introduce green fodder and mineral mixture. Monitor growth rate.',
+             icon: 'feed',
+           ),
+           LivestockStage(
+             ageInMonths: 12,
+             stageName: 'Heifer Management',
+             actionTitle: 'HS & BQ Vaccine',
+             description: 'Vaccinate against Hemorrhagic Septicemia and Black Quarter before monsoon.',
+             icon: 'vaccine',
+           ),
+           LivestockStage(
+             ageInMonths: 18,
+             stageName: 'Breeding Age',
+             actionTitle: 'Heat Detection',
+             description: 'Monitor for signs of heat. Consult vet for Artificial Insemination (AI).',
+             icon: 'medical',
+           ),
+        ],
+      ),
+      Livestock(
+        id: 'buffalo',
+        name: 'Buffalo',
+        icon: '🐃',
+        themeColor: Colors.grey.shade800,
+        lifecycleStages: [
+           LivestockStage(
+             ageInMonths: 1,
+             stageName: 'Calf Care',
+             actionTitle: 'Deworming',
+             description: 'First deworming dose at 10 days age. Protect from cold stress.',
+             icon: 'medical',
+           ),
+           LivestockStage(
+             ageInMonths: 6,
+             stageName: 'Feeding',
+             actionTitle: 'High Protein Feed',
+             description: 'Buffalo calves need higher protein diet. Clean water access 24/7.',
+             icon: 'feed',
+           ),
+           LivestockStage(
+             ageInMonths: 24,
+             stageName: 'Adult Care',
+             actionTitle: 'Mineral Mixture',
+             description: 'Daily 50g mineral mixture to prevent infertility issues.',
+             icon: 'white',
+           ),
+        ],
+      ),
+      Livestock(
+         id: 'goat',
+         name: 'Goat / Sheep',
+         icon: '🐐',
+         themeColor: Colors.orangeAccent,
+         lifecycleStages: [
+           LivestockStage(
+             ageInMonths: 1,
+             stageName: 'Kid Care',
+             actionTitle: 'Vaccination',
+             description: 'PPR Vaccine at 3 months age. Enterotoxaemia (ET) vaccine annually.',
+             icon: 'vaccine',
+           ),
+           LivestockStage(
+             ageInMonths: 3,
+             stageName: 'Weaning',
+             actionTitle: 'Separate from Mother',
+             description: 'Wean kids and start solid feed. prevention of Coccidiosis.',
+             icon: 'feed',
+           ),
+        ],
+      ),
+    ];
+    
+    if (_livestockList.isNotEmpty) {
+      _selectedLivestock = _livestockList[0];
+    }
   }
 
   // --- CROP CREATION METHODS UPDATED WITH DAY-WISE DATA ---
