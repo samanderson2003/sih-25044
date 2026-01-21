@@ -2,23 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:math' show sin, cos, sqrt, atan2;
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../model/farmer_model.dart';
 import '../../services/sentinel_hub_service.dart';
 
+// Map filter types
+enum MapFilterType { all, crop, livestock, alerts }
+
 class ConnectionsController extends ChangeNotifier {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
+  Set<Circle> _circles = {};
   FarmerProfile? _selectedFarmer;
   List<FarmerProfile> _farmers = [];
   FarmerProfile? _currentUser;
   BitmapDescriptor? _farmerIcon;
   BitmapDescriptor? _myFarmIcon;
   BitmapDescriptor? _diseaseIcon; // Red marker for diseased crops
+  BitmapDescriptor? _livestockIcon; // Purple marker for livestock
+  BitmapDescriptor? _alertIcon; // Orange marker for alerts
   bool _isLoading = true;
   String? _error;
+  
+  // Filter state
+  MapFilterType _selectedFilter = MapFilterType.all;
+  double _alertRadius = 10.0; // Default 10km radius
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -27,11 +38,17 @@ class ConnectionsController extends ChangeNotifier {
   // Getters
   GoogleMapController? get mapController => _mapController;
   Set<Marker> get markers => _markers;
+  Set<Circle> get circles => _circles;
   FarmerProfile? get selectedFarmer => _selectedFarmer;
   List<FarmerProfile> get farmers => _farmers;
   FarmerProfile? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  MapFilterType get selectedFilter => _selectedFilter;
+  double get alertRadius => _alertRadius;
+  
+  // Get filtered farmer count for UI display
+  int get filteredFarmerCount => _getFilteredFarmers().length;
 
   ConnectionsController() {
     print('\n\n');
@@ -75,6 +92,12 @@ class ConnectionsController extends ChangeNotifier {
 
     // Create red disease marker icon
     _diseaseIcon = await _createColoredMarker(Colors.red);
+    
+    // Create purple livestock marker icon
+    _livestockIcon = await _createColoredMarker(Colors.purple);
+    
+    // Create orange alert marker icon
+    _alertIcon = await _createColoredMarker(Colors.orange);
 
     _createMarkers(); // Create markers after icons are loaded
   }
@@ -272,7 +295,46 @@ class ConnectionsController extends ChangeNotifier {
 
           // Generate risk alerts
           List<String> riskAlerts = _generateRiskAlerts(soilQuality);
+          
+          // Fetch manual alerts from Firestore
+          List<ManualAlert> structuredAlerts = [];
+          final manualAlertsData = data['manualAlerts']; // Check root of doc
+          
+          if (manualAlertsData != null && manualAlertsData is List) {
+            for (var alert in manualAlertsData) {
+              if (alert is Map<String, dynamic>) {
+                 structuredAlerts.add(ManualAlert.fromMap(alert));
+                 riskAlerts.add(alert['message'] ?? 'Alert');
+              } else if (alert is String) {
+                // Backward compatibility
+                riskAlerts.add(alert);
+                // Create a default manual alert wrapper
+                structuredAlerts.add(ManualAlert(
+                  message: alert,
+                  type: 'General',
+                  radius: 500, // Default radius
+                  timestamp: DateTime.now(),
+                ));
+              }
+            }
+          }
+          
           print('⚠️ Risk alerts: ${riskAlerts.length} alerts');
+          
+          // Fetch livestock count from cattle subcollection
+          print('\n🐄 LIVESTOCK COUNT CHECK:');
+          int livestockCount = 0;
+          try {
+            final cattleSnapshot = await _firestore
+                .collection('users')
+                .doc(doc.id)
+                .collection('cattle')
+                .get();
+            livestockCount = cattleSnapshot.docs.length;
+            print('✅ Livestock count: $livestockCount');
+          } catch (e) {
+            print('⚠️ Error fetching livestock: $e');
+          }
 
           // Analyze satellite data for crop health monitoring
           print('\n🛰️ CROP HEALTH ANALYSIS (Multi-Index):');
@@ -322,10 +384,13 @@ class ConnectionsController extends ChangeNotifier {
             currentCrop: currentCrop,
             soilHealthStatus: soilHealthStatus,
             irrigationMethod: irrigation,
+
             riskAlerts: riskAlerts,
+            structuredAlerts: structuredAlerts,
             latestPrediction: null,
             profileImage: data['profileImage'],
             isFollowing: false,
+            livestockCount: livestockCount,
             stressDetected: healthAnalysis?['stress_detected'],
             healthStatus: healthAnalysis?['health_status'],
             stressType: healthAnalysis?['stress_type'],
@@ -434,13 +499,107 @@ class ConnectionsController extends ChangeNotifier {
     return alerts;
   }
 
+  // --- Mark Risk Alert (Manual) ---
+  Future<void> markRiskAlert(String alertMessage, String type, double radius) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      if (alertMessage.trim().isEmpty) return;
+
+      final alert = {
+        'message': alertMessage.trim(),
+        'type': type,
+        'radius': radius,
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+
+      // Add alert to user's farmData document
+      await _firestore.collection('farmData').doc(user.uid).set({
+        'manualAlerts': FieldValue.arrayUnion([alert]),
+        'lastAlertAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print('✅ Alert marked: $alertMessage ($type, ${radius}m)');
+      
+      // Refresh farmers to show the new alert immediately
+      refreshFarmers(); 
+    } catch (e) {
+      print('❌ Error marking alert: $e');
+      throw e;
+    }
+  }
+
   /// Refresh farmers data from Firebase
   Future<void> refreshFarmers() async {
     await _loadFarmersFromFirebase();
   }
+  
+  /// Set the map filter type
+  void setFilter(MapFilterType filter) {
+    _selectedFilter = filter;
+    _createMarkers();
+  }
+  
+  /// Set the alert radius (in km)
+  void setAlertRadius(double radius) {
+    _alertRadius = radius;
+    if (_selectedFilter == MapFilterType.alerts) {
+      _createMarkers();
+    }
+  }
+  
+  /// Calculate distance between two coordinates in km using Haversine formula
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // Earth's radius in kilometers
+    
+    final double dLat = _toRadians(lat2 - lat1);
+    final double dLon = _toRadians(lon2 - lon1);
+    
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) * cos(_toRadians(lat2)) *
+        sin(dLon / 2) * sin(dLon / 2);
+    
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    
+    return earthRadius * c;
+  }
+  
+  double _toRadians(double degree) {
+    return degree * 3.141592653589793 / 180;
+  }
+  
+  /// Get filtered farmers based on current filter
+  List<FarmerProfile> _getFilteredFarmers() {
+    switch (_selectedFilter) {
+      case MapFilterType.all:
+        return _farmers;
+      case MapFilterType.crop:
+        return _farmers.where((f) => f.hasCrop).toList();
+      case MapFilterType.livestock:
+        return _farmers.where((f) => f.hasLivestock).toList();
+      case MapFilterType.alerts:
+        if (_currentUser == null) {
+          // If no current user, show all farmers with alerts
+          return _farmers.where((f) => f.hasRiskAlerts).toList();
+        }
+        // Filter by distance from current user
+        return _farmers.where((f) {
+          if (!f.hasRiskAlerts) return false;
+          final distance = _calculateDistance(
+            _currentUser!.latitude,
+            _currentUser!.longitude,
+            f.latitude,
+            f.longitude,
+          );
+          return distance <= _alertRadius;
+        }).toList();
+    }
+  }
 
   void _createMarkers() {
-    if (_farmerIcon == null || _myFarmIcon == null || _diseaseIcon == null) {
+    if (_farmerIcon == null || _myFarmIcon == null || _diseaseIcon == null ||
+        _livestockIcon == null || _alertIcon == null) {
       print('⏳ Marker icons not loaded yet, waiting...');
       return;
     }
@@ -448,46 +607,56 @@ class ConnectionsController extends ChangeNotifier {
     print('\n========================================');
     print('🗺️ CREATING MARKERS');
     print('========================================');
-    print('📊 Total farmers to create markers for: ${_farmers.length}');
+    print('📊 Total farmers: ${_farmers.length}');
+    print('🔍 Active filter: $_selectedFilter');
+    
+    final filteredFarmers = _getFilteredFarmers();
+    print('� Filtered farmers: ${filteredFarmers.length}');
 
-    _markers = _farmers.map((farmer) {
+    _markers = filteredFarmers.map((farmer) {
       final isCurrentUser = farmer.id == _currentUser?.id;
       final hasStressDetected = farmer.stressDetected == true;
 
-      print('📍 Creating marker for: ${farmer.name}');
-      print('   Position: (${farmer.latitude}, ${farmer.longitude})');
-      print('   Is current user: $isCurrentUser');
-      print('   Stress detected: $hasStressDetected');
-      print('   Stress type: ${farmer.stressType}');
-
-      // Choose marker icon based on crop health status
+      // Choose marker icon based on filter type and status
       BitmapDescriptor markerIcon;
+      String snippet;
+      
       if (isCurrentUser) {
         markerIcon = _myFarmIcon!;
-      } else if (hasStressDetected) {
-        markerIcon = _diseaseIcon!; // Red marker for stressed crops
+        snippet = '🏠 My Farm - ${farmer.currentCrop}';
       } else {
-        markerIcon = _farmerIcon!; // Green marker for healthy crops
-      }
-
-      // Create snippet based on stress type
-      String snippet;
-      if (hasStressDetected) {
-        switch (farmer.stressType) {
-          case 'disease_or_pest':
-            snippet = '⚠️ Possible Disease/Pest - ${farmer.currentCrop}';
+        switch (_selectedFilter) {
+          case MapFilterType.livestock:
+            markerIcon = _livestockIcon!;
+            snippet = '🐄 ${farmer.livestockCount} livestock - ${farmer.currentCrop}';
             break;
-          case 'water_stress':
-            snippet = '💧 Water Stress - ${farmer.currentCrop}';
+          case MapFilterType.alerts:
+            markerIcon = _alertIcon!;
+            snippet = '⚠️ ${farmer.riskAlerts.length} alerts';
             break;
-          case 'early_stress':
-            snippet = '🔍 Early Stress Signs - ${farmer.currentCrop}';
-            break;
+          case MapFilterType.crop:
+          case MapFilterType.all:
           default:
-            snippet = '⚠️ Vegetation Stress - ${farmer.currentCrop}';
+            if (hasStressDetected) {
+              markerIcon = _diseaseIcon!;
+              switch (farmer.stressType) {
+                case 'disease_or_pest':
+                  snippet = '⚠️ Possible Disease/Pest - ${farmer.currentCrop}';
+                  break;
+                case 'water_stress':
+                  snippet = '💧 Water Stress - ${farmer.currentCrop}';
+                  break;
+                case 'early_stress':
+                  snippet = '🔍 Early Stress Signs - ${farmer.currentCrop}';
+                  break;
+                default:
+                  snippet = '⚠️ Vegetation Stress - ${farmer.currentCrop}';
+              }
+            } else {
+              markerIcon = _farmerIcon!;
+              snippet = farmer.currentCrop;
+            }
         }
-      } else {
-        snippet = farmer.currentCrop;
       }
 
       return Marker(
@@ -502,7 +671,48 @@ class ConnectionsController extends ChangeNotifier {
     print('========================================');
     print('✅ CREATED ${_markers.length} MARKERS');
     print('========================================\n');
+    _createCircles();
     notifyListeners();
+  }
+
+  void _createCircles() {
+    print('⭕ CREATING CIRCLES for ${_farmers.length} farmers');
+    _circles = {};
+    
+    // Only show circles if filter is All or Alerts
+    if (_selectedFilter != MapFilterType.all && _selectedFilter != MapFilterType.alerts) {
+       return;
+    }
+
+    final filteredFarmers = _getFilteredFarmers();
+    
+    for (var farmer in filteredFarmers) {
+       for (var alert in farmer.structuredAlerts) {
+          // Check if alert type matches filter (if specific filter active)
+          // Actually, if filter is 'All', show all. If 'Alerts', show all.
+          
+          Color circleColor;
+          if (alert.type == 'Crop') {
+             circleColor = Colors.green.withOpacity(0.3);
+          } else if (alert.type == 'Livestock') {
+             circleColor = Colors.purple.withOpacity(0.3);
+          } else {
+             circleColor = Colors.orange.withOpacity(0.3);
+          }
+          
+          _circles.add(
+            Circle(
+              circleId: CircleId('${farmer.id}_${alert.timestamp.millisecondsSinceEpoch}'),
+              center: LatLng(farmer.latitude, farmer.longitude),
+              radius: alert.radius,
+              fillColor: circleColor,
+              strokeColor: circleColor.withOpacity(0.8),
+              strokeWidth: 2,
+            ),
+          );
+       }
+    }
+    print('✅ CREATED ${_circles.length} CIRCLES');
   }
 
   void selectFarmer(FarmerProfile farmer) {
@@ -536,6 +746,7 @@ class ConnectionsController extends ChangeNotifier {
         latestPrediction: farmer.latestPrediction,
         profileImage: farmer.profileImage,
         isFollowing: !farmer.isFollowing,
+        livestockCount: farmer.livestockCount,
       );
 
       if (_selectedFarmer?.id == farmerId) {

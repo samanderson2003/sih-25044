@@ -139,8 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     // Finalize Registration (Creates Firestore user profile)
-    final result =
-        await _registerController.finalizeRegistration(model);
+    final result = await _registerController.finalizeRegistration(model);
 
     if (!mounted) return;
 
