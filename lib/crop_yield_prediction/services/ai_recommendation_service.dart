@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Service to generate AI-powered crop recommendations using ChatGPT
 class AIRecommendationService {
-  static const String _apiKey =
-      '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';
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   /// Generate variety-specific recommendations for 10% yield increase
@@ -34,7 +33,7 @@ class AIRecommendationService {
             Uri.parse(_apiUrl),
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_apiKey',
+              'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
             },
             body: json.encode({
               'model': 'gpt-4o',
@@ -42,9 +41,9 @@ class AIRecommendationService {
                 {
                   'role': 'system',
                   'content':
-                      '''You are an expert agricultural advisor specializing in Odisha (Odia) state agriculture practices. 
-You provide ONLY official recommendations approved by the Odisha Department of Agriculture & Farmers' Empowerment.
-Always cite Odisha government sources, KVK (Krishi Vigyan Kendra) guidelines, and state agricultural university research.
+                      '''You are an expert agricultural advisor specializing in Tamil Nadu (Tamil) state agriculture practices. 
+You provide ONLY official recommendations approved by the Tamil Nadu Department of Agriculture & Farmers' Empowerment.
+Always cite Tamil Nadu government sources, KVK (Krishi Vigyan Kendra) guidelines, and state agricultural university research.
 Format output as valid JSON only, no markdown or explanations.''',
                 },
                 {'role': 'user', 'content': prompt},
@@ -88,10 +87,10 @@ Format output as valid JSON only, no markdown or explanations.''',
     required Map<String, dynamic> climateData,
   }) {
     return '''
-TASK: Generate official Odisha government agricultural recommendations to increase ${crop} yield by 10%.
+TASK: Generate official Tamil Nadu government agricultural recommendations to increase ${crop} yield by 10%.
 
 CURRENT SITUATION:
-- Location: $district district, Odisha
+- Location: $district district, Tamil Nadu
 - Crop: $crop
 - Available Varieties: ${varieties.join(', ')}
 - Current Predicted Yield: ${currentYield.toStringAsFixed(2)} tonnes/hectare
@@ -114,17 +113,17 @@ CLIMATE DATA:
 - Daily Precipitation: ${climateData['prcp']}mm
 
 REQUIREMENTS:
-Generate ONLY official Odisha government recommendations including:
+Generate ONLY official Tamil Nadu government recommendations including:
 
 1. **Best Variety**: Which variety from the list is best suited? (with official reason)
 
-2. **Fertilizer Schedule**: Complete NPK + micronutrient schedule as per Odisha Dept. of Agriculture
+2. **Fertilizer Schedule**: Complete NPK + micronutrient schedule as per Tamil Nadu Dept. of Agriculture
    - Pre-sowing application
    - Basal dose (at planting)
    - Top dressing (split doses with timing)
    - Micronutrient application (based on deficiencies)
 
-3. **Irrigation Schedule**: Official Odisha government irrigation guidelines
+3. **Irrigation Schedule**: Official Tamil Nadu government irrigation guidelines
    - Critical growth stages
    - Frequency and amount
    - Water-saving techniques (if applicable)

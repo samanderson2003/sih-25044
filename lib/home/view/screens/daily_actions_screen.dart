@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:lottie/lottie.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../widgets/translated_text.dart';
 
 class DailyActionsScreen extends StatefulWidget {
@@ -24,9 +25,6 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _planData;
   String? _error;
-
-  static const String _openAIKey =
-      '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';
 
   @override
   void initState() {
@@ -53,11 +51,11 @@ class _DailyActionsScreenState extends State<DailyActionsScreen> {
 
       final prompt =
           '''
-You are an agricultural expert for Odisha, India. Provide daily farming recommendations for:
+You are an agricultural expert for Tamil Nadu, India. Provide daily farming recommendations for:
 
 Date: $formattedDate (Day $dayOfYear of ${widget.selectedDate.year})
 Season: $season
-Farm Location: ${widget.farmData['district'] ?? 'Odisha'}
+Farm Location: ${widget.farmData['district'] ?? 'Tamil Nadu'}
 
 Provide practical, actionable advice for this specific day. Return ONLY valid JSON (no markdown):
 
@@ -102,7 +100,7 @@ Focus on:
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_openAIKey',
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
         },
         body: jsonEncode({
           'model': 'gpt-4o-mini',
@@ -110,7 +108,7 @@ Focus on:
             {
               'role': 'system',
               'content':
-                  'You are an agricultural expert for Odisha, India. Provide practical farming advice. Return ONLY valid JSON, no markdown or extra text.',
+                  'You are an agricultural expert for Tamil Nadu, India. Provide practical farming advice. Return ONLY valid JSON, no markdown or extra text.',
             },
             {'role': 'user', 'content': prompt},
           ],

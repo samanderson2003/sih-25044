@@ -8,6 +8,7 @@ import '../../services/openai_service.dart';
 import '../../widgets/translated_text.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:lottie/lottie.dart';
+import 'indian_crop_selection_screen.dart';
 
 class NewCropYieldScreen extends StatefulWidget {
   const NewCropYieldScreen({super.key});
@@ -256,7 +257,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
       'fertilizer': [
         ProductRecommendation(
           productName: 'Urea (Nitrogen)',
-          governmentScheme: 'Odisha Government Subsidy',
+          governmentScheme: 'Tamil Nadu Government Subsidy',
           description:
               'Essential nitrogen source for growth, green leaves, and tillering. Most important fertilizer for rice cultivation.',
           applicationMethod:
@@ -266,7 +267,7 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
         ),
         ProductRecommendation(
           productName: 'DAP (Diammonium Phosphate)',
-          governmentScheme: 'Odisha Government Subsidy',
+          governmentScheme: 'Tamil Nadu Government Subsidy',
           description:
               'Provides phosphorus for strong root development and panicle formation. Critical during early growth stages.',
           applicationMethod:
@@ -556,53 +557,85 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
           children: [
             const SizedBox(height: 16),
 
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            // Header - AI Crop Advisor with Indian Crops
+            GestureDetector(
+              onTap: () {
+                // Navigate to Indian crop selection screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => IndianCropSelectionScreen(
+                      farmData: {
+                        'soilType': _selectedSoilType,
+                        'ph': double.tryParse(_phController.text) ?? 6.5,
+                        'rainfallMm': double.tryParse(_rainController.text) ?? 1200.0,
+                        'currentYield': 4.5,
+                        'currentCrop': 'Rice',
+                        'areaHectares': (double.tryParse(_areaController.text) ?? 1.0) * 0.404686, // Convert acres to hectares
+                        'soilOrganic': double.tryParse(_socController.text) ?? 0.5,
+                        'district': _selectedDistrict ?? 'Region',
+                        'zinc': 0.8,
+                        'iron': 0.9,
+                        'copper': 0.6,
+                        'manganese': 0.85,
+                        'boron': 0.5,
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2D5016), Color(0xFF4A7C2C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.analytics,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.analytics,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TranslatedText(
-                          'AI Crop Advisor',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TranslatedText(
+                            'AI Crop Advisor',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        TranslatedText(
-                          'Neural Network powered predictions',
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                      ],
+                          SizedBox(height: 4),
+                          TranslatedText(
+                            'Select crops available only in India',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const Icon(
+                      Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -960,51 +993,6 @@ class _NewCropYieldScreenState extends State<NewCropYieldScreen> {
             ),
 
             const SizedBox(height: 32),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitPrediction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D5016),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 2,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.insights, size: 24),
-                          SizedBox(width: 12),
-                          Flexible(
-                            child: TranslatedText(
-                              'Get AI Recommendations',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
 
             const SizedBox(height: 100),
           ],

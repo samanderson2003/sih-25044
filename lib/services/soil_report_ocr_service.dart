@@ -2,13 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Service to extract soil test data from lab report images using ChatGPT Vision API
 class SoilReportOCRService {
-  // TODO: Replace with your actual OpenAI API key
-  // Get your API key from: https://platform.openai.com/api-keys
-  static const String _apiKey =
-      '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';
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   /// Extract soil nutrient data from lab report image
@@ -24,7 +21,7 @@ class SoilReportOCRService {
             Uri.parse(_apiUrl),
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_apiKey',
+              'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
             },
             body: json.encode({
               'model': 'gpt-4o', // GPT-4 Vision model
@@ -166,8 +163,9 @@ IMPORTANT: Return ONLY the JSON object, no explanations or markdown.''',
     }
   }
 
-  /// Check if API key is configured
+  /// Check if API key is configured in .env
   static bool isConfigured() {
-    return _apiKey != 'YOUR_OPENAI_API_KEY_HERE' && _apiKey.isNotEmpty;
+    return dotenv.env['OPENAI_API_KEY'] != null &&
+        dotenv.env['OPENAI_API_KEY']!.isNotEmpty;
   }
 }

@@ -2,13 +2,11 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '/home/model/crop_model.dart';
 
 /// Service to generate crop lifecycle stages dynamically using ChatGPT API
 class CropLifecycleService {
-  // Using the same API key as soil report service
-  static const String _apiKey =
-      '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';
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   /// Generate 8-stage crop lifecycle for the given crop
@@ -40,7 +38,7 @@ class CropLifecycleService {
                 Uri.parse(_apiUrl),
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': 'Bearer $_apiKey',
+                  'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
                 },
                 body: json.encode({
                   'model': 'gpt-4o',

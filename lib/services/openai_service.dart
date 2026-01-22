@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Model for product recommendation
 class ProductRecommendation {
@@ -37,8 +38,6 @@ class ProductRecommendation {
 }
 
 class OpenAIService {
-  static const String _apiKey =
-      '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';
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
 
   /// Get 10% yield improvement recommendations for farmers
@@ -53,13 +52,13 @@ class OpenAIService {
       final targetYield = currentYield * 1.10;
       final prompt =
           '''
-You are an agricultural expert for Odisha, India. A farmer grows $cropName in $district with $soilType soil, current yield: ${currentYield.toStringAsFixed(2)} T/Ha.
+You are an agricultural expert for Tamil Nadu, India. A farmer grows $cropName in $district with $soilType soil, current yield: ${currentYield.toStringAsFixed(2)} T/Ha.
 
 Recommend 3 specific products (PEST CONTROL, FERTILIZER, IRRIGATION) to increase yield from ${currentYield.toStringAsFixed(2)} to ${targetYield.toStringAsFixed(2)} T/Ha (10% increase).
 
 IMPORTANT RULES:
-1. Only recommend products available in Odisha (government or local market)
-2. Prefer Odisha Government schemes/brands
+1. Only recommend products available in Tamil Nadu (government or local market)
+2. Prefer Tamil Nadu Government schemes/brands
 3. Each product MUST have an image filename that exists in the assets folder
 4. Keep descriptions simple for farmers (2-3 sentences in simple language)
 
@@ -89,7 +88,7 @@ Return ONLY valid JSON (no markdown):
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
         },
         body: jsonEncode({
           'model': 'gpt-4o-mini',
@@ -97,7 +96,7 @@ Return ONLY valid JSON (no markdown):
             {
               'role': 'system',
               'content':
-                  'You are an Odisha agricultural expert. Return ONLY valid JSON, no markdown or extra text. Recommend only locally available products.',
+                  'You are a Tamil Nadu agricultural expert. Return ONLY valid JSON, no markdown or extra text. Recommend only locally available products.',
             },
             {'role': 'user', 'content': prompt},
           ],
@@ -204,7 +203,7 @@ Return ONLY valid JSON (no markdown):
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer ${dotenv.env['OPENAI_API_KEY']!}',
         },
         body: json.encode({
           'model': 'gpt-4o-mini',
@@ -212,7 +211,7 @@ Return ONLY valid JSON (no markdown):
             {
               'role': 'system',
               'content':
-                  'You are an expert agricultural advisor for Odisha Government, specializing in crop management, fertilizers, irrigation, and pest control. Provide practical, local, farmer-friendly recommendations in simple language.',
+                  'You are an expert agricultural advisor for Tamil Nadu Government, specializing in crop management, fertilizers, irrigation, and pest control. Provide practical, local, farmer-friendly recommendations in simple language.',
             },
             {'role': 'user', 'content': prompt},
           ],
@@ -251,7 +250,7 @@ Return ONLY valid JSON (no markdown):
     final season = _getSeason(currentDate.month);
 
     return '''
-**CONTEXT: Odisha Government Agricultural Advisory**
+**CONTEXT: Tamil Nadu Government Agricultural Advisory**
 Date: ${currentDate.day}/${currentDate.month}/${currentDate.year}
 Season: $season
 District: $district
@@ -279,7 +278,7 @@ District: $district
 - Regional Avg Rainfall: ${varietyData['rainfall'] ?? 'N/A'}mm
 
 **TASK:**
-Generate PRACTICAL, DATE-AWARE recommendations for Odisha farmers. Return ONLY a valid JSON object (no markdown, no code blocks) with this exact structure:
+Generate PRACTICAL, DATE-AWARE recommendations for Tamil Nadu farmers. Return ONLY a valid JSON object (no markdown, no code blocks) with this exact structure:
 
 {
   "fertilizer_stages": [
@@ -344,7 +343,7 @@ Generate PRACTICAL, DATE-AWARE recommendations for Odisha farmers. Return ONLY a
 }
 
 **REQUIREMENTS:**
-1. Use REAL Odisha brands: IFFCO, Coromandel, Rashtriya Chemicals, Jain Irrigation, Kirloskar
+1. Use REAL Tamil Nadu brands: IFFCO, Coromandel, Rashtriya Chemicals, Jain Irrigation, Kirloskar
 2. Base fertilizer timing on CURRENT DATE and crop cycle
 3. Adjust irrigation based on ACTUAL rainfall data (${farmData['prcp_annual_climate']}mm)
 4. Consider soil deficiencies (low Zn/Fe need micronutrient supplements)
