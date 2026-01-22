@@ -19,6 +19,7 @@ import 'terms&permissions/view/permissions_screen.dart';
 import 'prior_data/controller/farm_data_controller.dart';
 import 'prior_data/view/simplified_data_collection_flow.dart';
 import 'providers/language_provider.dart';
+import 'connections/controller/connections_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,7 @@ class MyApp extends StatelessWidget {
         Provider<TermsConditionsController>(create: (_) => TermsConditionsController()),
         Provider<FarmDataController>(create: (_) => FarmDataController()),
         Provider<CattleController>(create: (_) => CattleController()),
+        ChangeNotifierProvider(create: (_) => ConnectionsController()),
       ],
       child: MaterialApp(
         title: 'CropYield - Smart Farming',

@@ -24,9 +24,8 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ConnectionsController(),
-      child: Scaffold(
+    // Using global provider from main.dart
+    return Scaffold(
         body: Stack(
           children: [
             // Google Map
@@ -297,47 +296,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
                                 '🐄 Livestock',
                                 Colors.purple,
                               ),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                context,
-                                controller,
-                                MapFilterType.alerts,
-                                '⚠️ Alerts',
-                                Colors.orange,
-                              ),
+
                             ],
                           ),
                         ),
-                        // Alert Radius Slider (only shown when alerts filter is selected)
-                        if (controller.selectedFilter == MapFilterType.alerts) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.radar, size: 16, color: Colors.orange),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Radius: ${controller.alertRadius.toStringAsFixed(0)} km',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: Slider(
-                                  value: controller.alertRadius,
-                                  min: 1,
-                                  max: 50,
-                                  divisions: 49,
-                                  activeColor: Colors.orange,
-                                  inactiveColor: Colors.orange.withOpacity(0.3),
-                                  onChanged: (value) {
-                                    controller.setAlertRadius(value);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   );
@@ -472,8 +434,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildFilterChip(

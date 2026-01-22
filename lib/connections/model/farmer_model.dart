@@ -5,12 +5,18 @@ class ManualAlert {
   final String type; // 'Crop', 'Livestock', 'General'
   final double radius;
   final DateTime timestamp;
+  final String? imageUrl;
+  final String? disease;
+  final double? confidence;
 
   ManualAlert({
     required this.message,
     required this.type,
     required this.radius,
     required this.timestamp,
+    this.imageUrl,
+    this.disease,
+    this.confidence,
   });
 
   factory ManualAlert.fromMap(Map<String, dynamic> map) {
@@ -19,6 +25,9 @@ class ManualAlert {
       type: map['type'] ?? 'General',
       radius: (map['radius'] as num?)?.toDouble() ?? 500.0,
       timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      imageUrl: map['imageUrl'],
+      disease: map['disease'],
+      confidence: (map['confidence'] as num?)?.toDouble(),
     );
   }
 }
@@ -160,6 +169,9 @@ class FarmerProfile {
         'type': e.type,
         'radius': e.radius,
         'timestamp': Timestamp.fromDate(e.timestamp),
+        'imageUrl': e.imageUrl,
+        'disease': e.disease,
+        'confidence': e.confidence,
       }).toList(),
       'latestPrediction': latestPrediction?.toJson(),
       'profileImage': profileImage,

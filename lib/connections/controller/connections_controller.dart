@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:io'; 
 import 'dart:math' show sin, cos, sqrt, atan2;
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../model/farmer_model.dart';
 import '../../services/sentinel_hub_service.dart';
 
 // Map filter types
-enum MapFilterType { all, crop, livestock, alerts }
+enum MapFilterType { all, crop, livestock }
 
 class ConnectionsController extends ChangeNotifier {
   GoogleMapController? _mapController;
@@ -500,18 +502,47 @@ class ConnectionsController extends ChangeNotifier {
   }
 
   // --- Mark Risk Alert (Manual) ---
-  Future<void> markRiskAlert(String alertMessage, String type, double radius) async {
+  // --- Mark Risk Alert (Manual & Auto) ---
+  Future<void> markRiskAlert(
+    String alertMessage, 
+    String type, 
+    double radius, {
+    File? imageFile,
+    Map<String, dynamic>? extraData,
+  }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
       if (alertMessage.trim().isEmpty) return;
 
+      String? imageUrl;
+      
+      // Upload image if provided
+      if (imageFile != null) {
+        try {
+           final ref = FirebaseStorage.instance
+               .ref()
+               .child('alerts')
+               .child(user.uid)
+               .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+               
+           await ref.putFile(imageFile);
+           imageUrl = await ref.getDownloadURL();
+           print('📸 Image uploaded: $imageUrl');
+        } catch (e) {
+           print('⚠️ Image upload failed: $e');
+        }
+      }
+
       final alert = {
         'message': alertMessage.trim(),
         'type': type,
         'radius': radius,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp': DateTime.now(), // Use client-side time for arrayUnion
+        'imageUrl': imageUrl,
+        'disease': extraData?['disease'],
+        'confidence': extraData?['confidence'],
       };
 
       // Add alert to user's farmData document
@@ -541,14 +572,6 @@ class ConnectionsController extends ChangeNotifier {
     _createMarkers();
   }
   
-  /// Set the alert radius (in km)
-  void setAlertRadius(double radius) {
-    _alertRadius = radius;
-    if (_selectedFilter == MapFilterType.alerts) {
-      _createMarkers();
-    }
-  }
-  
   /// Calculate distance between two coordinates in km using Haversine formula
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // Earth's radius in kilometers
@@ -575,25 +598,11 @@ class ConnectionsController extends ChangeNotifier {
       case MapFilterType.all:
         return _farmers;
       case MapFilterType.crop:
+        // Strict: Only farmers with crops
         return _farmers.where((f) => f.hasCrop).toList();
       case MapFilterType.livestock:
+        // Strict: Only farmers with livestock
         return _farmers.where((f) => f.hasLivestock).toList();
-      case MapFilterType.alerts:
-        if (_currentUser == null) {
-          // If no current user, show all farmers with alerts
-          return _farmers.where((f) => f.hasRiskAlerts).toList();
-        }
-        // Filter by distance from current user
-        return _farmers.where((f) {
-          if (!f.hasRiskAlerts) return false;
-          final distance = _calculateDistance(
-            _currentUser!.latitude,
-            _currentUser!.longitude,
-            f.latitude,
-            f.longitude,
-          );
-          return distance <= _alertRadius;
-        }).toList();
     }
   }
 
@@ -617,45 +626,92 @@ class ConnectionsController extends ChangeNotifier {
       final isCurrentUser = farmer.id == _currentUser?.id;
       final hasStressDetected = farmer.stressDetected == true;
 
-      // Choose marker icon based on filter type and status
       BitmapDescriptor markerIcon;
-      String snippet;
+      String snippet = '';
+
+      // Check for alerts first
+      ManualAlert? activeAlert;
       
+      // Filter alerts based on selected mode
+      if (_selectedFilter == MapFilterType.livestock) {
+        // Only consider LivestockDisease alerts
+         final alerts = farmer.structuredAlerts.where((a) => a.type == 'LivestockDisease').toList();
+         if (alerts.isNotEmpty) {
+            // Sort by timestamp descending (newest first)
+            alerts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            activeAlert = alerts.first;
+         }
+      } else if (_selectedFilter == MapFilterType.crop) {
+         // Only consider Crop alerts
+         final alerts = farmer.structuredAlerts.where((a) => a.type == 'Crop').toList();
+         if (alerts.isNotEmpty) {
+            alerts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            activeAlert = alerts.first;
+         }
+      } else {
+        // All mode - prioritize LivestockDisease, then others
+         final alerts = farmer.structuredAlerts.toList();
+         if (alerts.isNotEmpty) {
+            // Sort by timestamp descending to get newest relevant info
+            alerts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            
+            // However, we might want to prioritize 'LivestockDisease' regardless of time?
+            // User requested: "not showing the 2nd disease". If user just scanned, it's newest. 
+            // So pure timestamp sort is usually best.
+            activeAlert = alerts.first;
+            
+            // Optional: If newest is generic but we have a high-risk LivestockDisease closely behind, maybe show risk?
+            // But let's trust timestamp for "current situation".
+         }
+      }
+
+
       if (isCurrentUser) {
         markerIcon = _myFarmIcon!;
         snippet = '🏠 My Farm - ${farmer.currentCrop}';
+        
+         if (activeAlert != null) {
+           markerIcon = _diseaseIcon!; // Red pin for importance
+           if (activeAlert.disease != null) {
+              snippet = '⚠️ ${activeAlert.disease} (${activeAlert.type == 'LivestockDisease' ? 'Livestock' : 'Crop'})';
+           } else {
+              snippet = '⚠️ ${activeAlert.message}';
+           }
+        }
       } else {
-        switch (_selectedFilter) {
-          case MapFilterType.livestock:
-            markerIcon = _livestockIcon!;
-            snippet = '🐄 ${farmer.livestockCount} livestock - ${farmer.currentCrop}';
-            break;
-          case MapFilterType.alerts:
-            markerIcon = _alertIcon!;
-            snippet = '⚠️ ${farmer.riskAlerts.length} alerts';
-            break;
-          case MapFilterType.crop:
-          case MapFilterType.all:
-          default:
-            if (hasStressDetected) {
-              markerIcon = _diseaseIcon!;
-              switch (farmer.stressType) {
-                case 'disease_or_pest':
-                  snippet = '⚠️ Possible Disease/Pest - ${farmer.currentCrop}';
-                  break;
-                case 'water_stress':
-                  snippet = '💧 Water Stress - ${farmer.currentCrop}';
-                  break;
-                case 'early_stress':
-                  snippet = '🔍 Early Stress Signs - ${farmer.currentCrop}';
-                  break;
-                default:
-                  snippet = '⚠️ Vegetation Stress - ${farmer.currentCrop}';
+        if (activeAlert != null) {
+           markerIcon = _diseaseIcon!;
+           if (activeAlert.disease != null) {
+              snippet = '⚠️ ${activeAlert.disease} (${activeAlert.type == 'LivestockDisease' ? 'Livestock' : 'Crop'})';
+           } else {
+              snippet = '⚠️ ${activeAlert.message}';
+           }
+        } else {
+           // No active alert matching the filter
+           switch (_selectedFilter) {
+            case MapFilterType.livestock:
+              markerIcon = _livestockIcon!;
+              snippet = '🐄 ${farmer.livestockCount} livestock';
+              break;
+            case MapFilterType.crop:
+              if (hasStressDetected) {
+                 markerIcon = _diseaseIcon!;
+                 snippet = '⚠️ Stress Detected - ${farmer.currentCrop}';
+              } else {
+                 markerIcon = _farmerIcon!;
+                 snippet = farmer.currentCrop;
               }
-            } else {
-              markerIcon = _farmerIcon!;
-              snippet = farmer.currentCrop;
-            }
+              break;
+            case MapFilterType.all:
+            default:
+              if (hasStressDetected) {
+                 markerIcon = _diseaseIcon!;
+                 snippet = '⚠️ Vegetation Stress - ${farmer.currentCrop}';
+              } else {
+                 markerIcon = _farmerIcon!;
+                 snippet = farmer.currentCrop;
+              }
+           }
         }
       }
 
@@ -664,7 +720,12 @@ class ConnectionsController extends ChangeNotifier {
         position: LatLng(farmer.latitude, farmer.longitude),
         icon: markerIcon,
         infoWindow: InfoWindow(title: farmer.name, snippet: snippet),
-        onTap: () => selectFarmer(farmer),
+        // Disable bottom sheet details for:
+        // 1. Current User (Always)
+        // 2. Strict Filters (Crop/Livestock modes - show only snippets)
+        onTap: (isCurrentUser || _selectedFilter != MapFilterType.all)
+            ? null
+            : () => selectFarmer(farmer),
       );
     }).toSet();
 
@@ -679,20 +740,21 @@ class ConnectionsController extends ChangeNotifier {
     print('⭕ CREATING CIRCLES for ${_farmers.length} farmers');
     _circles = {};
     
-    // Only show circles if filter is All or Alerts
-    if (_selectedFilter != MapFilterType.all && _selectedFilter != MapFilterType.alerts) {
-       return;
-    }
-
+    // Draw circles for all visible farmers with alerts
+    // We removed the filter check so circles appear in all relevant views
+    
     final filteredFarmers = _getFilteredFarmers();
     
     for (var farmer in filteredFarmers) {
        for (var alert in farmer.structuredAlerts) {
-          // Check if alert type matches filter (if specific filter active)
-          // Actually, if filter is 'All', show all. If 'Alerts', show all.
-          
+          // Strict filtering for circles too
+          if (_selectedFilter == MapFilterType.crop && alert.type == 'LivestockDisease') continue;
+          if (_selectedFilter == MapFilterType.livestock && alert.type != 'LivestockDisease') continue;
+
           Color circleColor;
-          if (alert.type == 'Crop') {
+           if (alert.type == 'LivestockDisease') {
+             circleColor = Colors.red.withOpacity(0.3); // High priority disease
+          } else if (alert.type == 'Crop') {
              circleColor = Colors.green.withOpacity(0.3);
           } else if (alert.type == 'Livestock') {
              circleColor = Colors.purple.withOpacity(0.3);
@@ -758,9 +820,15 @@ class ConnectionsController extends ChangeNotifier {
   }
 
   void moveToLocation(double lat, double lng) {
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 14),
-    );
+    try {
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(lat, lng), 14),
+        );
+      }
+    } catch (e) {
+      print('⚠️ Error moving camera: $e');
+    }
   }
 
   @override

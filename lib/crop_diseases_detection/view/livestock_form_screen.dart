@@ -7,6 +7,7 @@ import '../../services/livestock_diagnosis_service.dart';
 import '../../profile/model/cattle_model.dart';
 import '../../widgets/translated_text.dart';
 import '../controller/disease_detection_controller.dart';
+import '../../connections/controller/connections_controller.dart';
 import 'disease_result_screen.dart';
 
 class LivestockFormScreen extends StatefulWidget {
@@ -20,33 +21,11 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
   String? _selectedCattleId;
-  final TextEditingController _symptomsController = TextEditingController();
   int _currentStep = 0;
-
-  final List<String> _questions = [
-    "Diarrhea: Have you noticed any signs of diarrhea (chronic or bloody)?",
-    "Weight Loss: Are they losing weight despite normal appetite?",
-    "Coat Condition: Does the cattle have a poor or unhealthy coat?",
-    "Milk Production: Is there a noticeable reduction in milk production?",
-    "Fever: Is the cattle showing signs of fever?",
-    "Anemia: Do they have pale gums or appear weak?",
-    "Lymph Nodes: Are there visible swellings in lymph nodes?",
-    "Appetite Loss: Has there been a recent loss of appetite?",
-    "Straining: Is there straining during defecation?",
-    "Dehydration: Signs of dehydration (sunken eyes, dry nose)?",
-    "Abortion: Has there been any recent abortion (if pregnant)?",
-    "Neurological: Any incoordination or abnormal behavior?",
-    "Movement: Does the cattle lack coordination or appear clumsy?",
-    "Muscle Tremors: Are there muscle tremors or sound sensitivity?",
-    "Activity Level: Is the cattle lethargic?",
-  ];
-
-  late List<String?> _answers;
 
   @override
   void initState() {
     super.initState();
-    _answers = List.filled(_questions.length, null);
     // Fetch cattle data when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CattleController>().getCattleStream();
@@ -71,27 +50,17 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
     }
   }
 
-  void _updateAnswer(int index, String answer) {
-    setState(() {
-      _answers[index] = answer;
-    });
-  }
-
   bool get _canSubmit {
-    return _imageFile != null &&
-        _selectedCattleId != null &&
-        !_answers.contains(null);
+    return _imageFile != null && _selectedCattleId != null;
   }
 
   Future<void> _submitForm() async {
     if (!_canSubmit) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all fields and upload an image')),
+        const SnackBar(content: Text('Please select cattle and upload an image')),
       );
       return;
     }
-
-    final controller = context.read<DiseaseDetectionController>();
 
     // Show loading
     showDialog(
@@ -102,35 +71,44 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
       ),
     );
 
-    // Prepare questionnaire data
-    final questionnaire = <String, String>{};
-    for (int i = 0; i < _questions.length; i++) {
-      questionnaire[_questions[i]] = _answers[i]!;
-    }
-    questionnaire['additional_symptoms'] = _symptomsController.text;
-    questionnaire['cattle_id'] = _selectedCattleId!;
-
     try {
-      // Use the direct AI service using the provided key
       final service = LivestockDiagnosisService();
       
-      // Get cattle type name for context
-      // We need to look up the cattle object from the controller or just pass ID.
-      // Ideally we would pass "Cow" or "Goat". For now, we'll pass a generic string 
-      // or try to find it if we had the list handy. 
-      // The prompt will work with just "Livestock" if needed, but type is better.
-      
+      // Call new custom DL model service
       final result = await service.diagnoseLivestock(
         imageFile: _imageFile!,
-        symptoms: questionnaire,
         cattleType: 'Livestock (ID: $_selectedCattleId)', 
       );
 
       if (mounted) {
         Navigator.pop(context); // Close loading
         
-        // Add to history via controller for persistence (optional, but good for UI consistency)
-        // controller.addManualResult(result, _imageFile!); // We would need to implement this in controller
+        // AUTOMATIC ALERT TRIGGER
+        // If a disease is detected (prediction is not "Healthy" or "Invalid"), trigger a map alert
+        // Assuming model returns 'Healthy' for healthy animals.
+        // We case-insensitive check to be safe.
+        final isHealthy = result.predictedClass.toLowerCase() == 'healthy' || 
+                          result.predictedClass.toLowerCase() == 'normal';
+        
+        if (!isHealthy) {
+          try {
+             final connectionsController = context.read<ConnectionsController>();
+             await connectionsController.markRiskAlert(
+               'Livestock Disease: ${result.predictedClass}',
+               'LivestockDisease',
+               15000, // 15 km radius
+               imageFile: _imageFile,
+               extraData: {
+                 'disease': result.predictedClass,
+                 'confidence': result.confidence,
+               },
+             );
+             debugPrint('✅ Automatic Livestock Alert Triggered');
+          } catch (e) {
+             debugPrint('⚠️ Failed to trigger automatic alert: $e');
+             // Don't block the result screen even if alert fails
+          }
+        }
         
         Navigator.pushReplacement(
           context,
@@ -147,7 +125,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
         Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(
-             content: Text('AI Diagnosis Failed: $e'),
+             content: Text('Diagnosis Failed: $e'),
              backgroundColor: Colors.red,
            ),
         );
@@ -166,7 +144,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
       body: Stepper(
         currentStep: _currentStep,
         onStepContinue: () {
-          if (_currentStep < 2) {
+          if (_currentStep < 1) { // 0 -> 1
             setState(() => _currentStep++);
           } else {
             _submitForm();
@@ -189,7 +167,7 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                       backgroundColor: const Color(0xFFFCCD2A),
                       foregroundColor: Colors.black,
                     ),
-                    child: TranslatedText(_currentStep == 2 ? 'Submit' : 'Next'),
+                    child: TranslatedText(_currentStep == 1 ? 'Submit' : 'Next'),
                   ),
                 ),
                 if (_currentStep > 0) ...[
@@ -222,7 +200,6 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     label: TranslatedText('Choose Animal', style: TextStyle(color: Colors.grey)),
-                    // labelText: 'Choose Animal', // Removed string label
                   ),
                   items: cattleList.map((cattle) {
                     return DropdownMenuItem(
@@ -265,59 +242,6 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
             ),
             isActive: _currentStep >= 1,
           ),
-
-          // Step 3: Questionnaire
-          Step(
-            title: const TranslatedText('Symptoms'),
-            content: Column(
-              children: [
-                ...List.generate(_questions.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${index + 1}. ',
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            Expanded(
-                              child: TranslatedText(
-                                _questions[index],
-                                style: const TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            _buildChoiceChip(index, 'Yes'),
-                            const SizedBox(width: 10),
-                            _buildChoiceChip(index, 'No'),
-                            const SizedBox(width: 10),
-                            _buildChoiceChip(index, 'Not Sure'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                TextField(
-                  controller: _symptomsController,
-                  decoration: const InputDecoration(
-                    label: TranslatedText('Additional Symptoms', style: TextStyle(color: Colors.grey)),
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            isActive: _currentStep >= 2,
-          ),
         ],
       ),
     );
@@ -340,20 +264,6 @@ class _LivestockFormScreenState extends State<LivestockFormScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildChoiceChip(int index, String option) {
-    final isSelected = _answers[index] == option;
-    return ChoiceChip(
-      label: TranslatedText(option),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) _updateAnswer(index, option);
-      },
-      selectedColor: const Color(0xFFFCCD2A),
-      backgroundColor: Colors.grey[100],
-      labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.black87),
     );
   }
 }
